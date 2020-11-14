@@ -12,6 +12,15 @@ from shlex import shlex
 
 import config
 
+required_permissions = discord.Permissions(
+    read_messages=True,
+    send_messages=True,
+    manage_messages=True,
+    embed_links=True,
+    read_message_history=True,
+    add_reactions=True,
+)
+
 # permissions: send messages, manage messages, add reactions, read message history
 
 # TODOS:
@@ -25,9 +34,18 @@ EMOJI_A = "\N{REGIONAL INDICATOR SYMBOL LETTER A}"
 EMOJI_Z = "\N{REGIONAL INDICATOR SYMBOL LETTER Z}"
 NUMBER_TO_EMOJI_UNICODE = "\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}"
 
+class MyHelpCommand(commands.MinimalHelpCommand):
+    def get_ending_note(self):
+        return f"Like this bot? Add it to your own servers by clicking <https://discord.com/oauth2/authorize?client_id={bot.user.id}&scope=bot&permissions={required_permissions.value}>"
+
+    async def send_pages(self):
+        destination = self.get_destination()
+        for page in self.paginator.pages:
+            await destination.send(page, delete_after=30)
+
 bot = commands.Bot(
     command_prefix="!",
-    help_command=None,
+    help_command=MyHelpCommand(),
     intents=discord.Intents(guilds=True, guild_reactions=True, messages=True, members=True),
 )
 
