@@ -1,12 +1,8 @@
 #!/usr/bin/env python3
 
 import asyncio
-import base64
 import discord
-import json
 import string
-import sys
-import zlib
 from discord.ext import commands
 from shlex import shlex
 
@@ -65,14 +61,6 @@ def is_admin():
 @commands.check_any(commands.is_owner(), is_admin())
 async def removeallpolls(ctx):
     await ctx.channel.purge(check=(lambda m: m.author == ctx.me))
-
-
-def serialize(obj):
-    return base64.b64encode(zlib.compress(json.dumps(obj, separators=(",", ":")).encode())).decode()
-
-
-def deserialize(data):
-    return json.loads(zlib.decompress(base64.b64decode(data.encode())).decode())
 
 
 def parse_command_args(text):
