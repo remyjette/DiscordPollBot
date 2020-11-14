@@ -9,12 +9,12 @@ from shlex import shlex
 import config
 
 required_permissions = discord.Permissions(
-    read_messages=True,
-    send_messages=True,
-    manage_messages=True,
-    embed_links=True,
-    read_message_history=True,
-    add_reactions=True,
+    read_messages=True,  # To see commands sent by users
+    send_messages=True,  # To send the poll message
+    manage_messages=True,  # To clear invalid reacts from users
+    embed_links=True,  # To embed the poll as a rich content card
+    read_message_history=True,  # To find the poll when a user does !addoption or !removeoption
+    add_reactions=True,  # To add the initial reactions for users to be able to click on to vote
 )
 
 # TODOS:
@@ -222,9 +222,7 @@ async def startpoll(ctx, *, args):
 
     embed = create_poll_embed_from_settings(settings)
 
-    # TODO avoid awaiting on the flatten
-    past_poll_messages = await ctx.history().filter(lambda m: m.author == ctx.me and len(m.embeds) > 0).flatten()
-    await asyncio.gather(ctx.send(embed=embed), *[message.clear_reactions() for message in past_poll_messages])
+    await ctx.send(embed=embed)
 
 
 def get_last_poll_message(ctx):
