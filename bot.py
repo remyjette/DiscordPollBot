@@ -40,7 +40,7 @@ def is_admin():
 
 
 @bot.command()
-@commands.check_any(commands.is_owner(), is_admin)
+@commands.check_any(commands.is_owner(), is_admin())
 async def removeallpolls(ctx):
     await ctx.channel.purge(check=(lambda m: m.author == ctx.me))
 
