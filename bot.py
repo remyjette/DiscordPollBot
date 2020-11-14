@@ -32,14 +32,20 @@ EMOJI_A = "\N{REGIONAL INDICATOR SYMBOL LETTER A}"
 EMOJI_Z = "\N{REGIONAL INDICATOR SYMBOL LETTER Z}"
 NUMBER_TO_EMOJI_UNICODE = "\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}"
 
+
 class MyHelpCommand(commands.MinimalHelpCommand):
     def get_ending_note(self):
-        return f"Like this bot? Add it to your own servers by clicking <https://discord.com/oauth2/authorize?client_id={bot.user.id}&scope=bot&permissions={required_permissions.value}>"
+        return (
+            "Like this bot? Add it to your own servers by clicking "
+            f"<https://discord.com/oauth2/authorize?client_id={bot.user.id}"
+            f"&scope=bot&permissions={required_permissions.value}>"
+        )
 
     async def send_pages(self):
         destination = self.get_destination()
         for page in self.paginator.pages:
             await destination.send(page, delete_after=30)
+
 
 bot = commands.Bot(
     command_prefix="!",
