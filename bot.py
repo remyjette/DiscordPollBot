@@ -215,6 +215,11 @@ async def startpoll(ctx, *, args):
     else:
         settings["title"] = args
 
+    # TODO: vote_options is currently broken because it doesn't add reactions.
+    if "vote_options" in settings:
+        del settings["vote_options"]
+        await ctx.send(f"{ctx.author.mention} 'vote_options' is coming soon. For now, add poll options with !addoption", delete_after=10)
+
     embed = create_poll_embed_from_settings(settings)
 
     # TODO avoid awaiting on the flatten
