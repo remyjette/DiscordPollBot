@@ -21,8 +21,6 @@ required_permissions = discord.Permissions(
     add_reactions=True,
 )
 
-# permissions: send messages, manage messages, add reactions, read message history
-
 # TODOS:
 # 1) what if I want a comma in a vote option?
 # 2) Complain if we don't have permissions
