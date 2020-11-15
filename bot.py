@@ -2,11 +2,11 @@
 
 import asyncio
 import discord
+import os
 import string
+import sys
 from discord.ext import commands
 from shlex import shlex
-
-import config
 
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
@@ -273,4 +273,9 @@ async def on_ready():
 
 
 if __name__ == "__main__":
-    bot.run(config.token)
+    try:
+        token = os.environ["DISCORD_TOKEN"]
+    except KeyError:
+        print("You need to specify the environment variable DISCORD_TOKEN before running the bot!", file=sys.stderr)
+        sys.exit(1)
+    bot.run(token)
