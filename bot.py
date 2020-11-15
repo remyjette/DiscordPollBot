@@ -101,15 +101,19 @@ def add_poll_option(embed, option):
     return new_option_emoji
 
 
-def remove_poll_option(embed, option_string):
-    if emoji_to_number(option_string) is not None:
-        emoji = option_string
-    elif len(option_string) == 1 and option_string.isdigit():
-        emoji = option_string + NUMBER_TO_EMOJI_UNICODE
-    elif len(option_string) == 1 and ord("A") <= (option_ord := ord(option_string.upper())) <= ord("Z"):
-        emoji = chr(ord(EMOJI_A) + option_ord - ord("A"))
-    else:
-        emoji = None
+def remove_poll_option(embed, option=None, emoji=None):
+    assert option or emoji
+
+    if not emoji:
+        if emoji_to_number(option) is not None:
+            emoji = option
+            option = None
+        elif len(option) == 1 and option.isdigit():
+            emoji = option + NUMBER_TO_EMOJI_UNICODE
+            option = None
+        elif len(option) == 1 and ord("A") <= (option_ord := ord(option.upper())) <= ord("Z"):
+            emoji = chr(ord(EMOJI_A) + option_ord - ord("A"))
+            option = None
 
     def filtered_lines(lines):
         nonlocal emoji
@@ -117,10 +121,11 @@ def remove_poll_option(embed, option_string):
         for line in iterator:
             if emoji and line.startswith(emoji):
                 break
-            line_emoji, line_option = line.split(" ", maxsplit=1)
-            if line_option == option_string:
-                emoji = line_emoji
-                break
+            if option is not None:
+                line_emoji, line_option = line.split(" ", maxsplit=1)
+                if line_option == option:
+                    emoji = line_emoji
+                    break
             yield line
         yield from iterator
 
@@ -179,6 +184,29 @@ async def on_raw_reaction_add(payload):
     for reaction in message.reactions:
         if not reaction.me:
             await message.clear_reaction(reaction.emoji)
+
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    await bot.wait_until_ready()
+
+    if payload.user_id == bot.user.id:
+        return
+    channel = bot.get_channel(payload.channel_id)
+    message = await channel.fetch_message(payload.message_id)
+    if message.author != bot.user:
+        return
+    emoji = payload.emoji.name
+    reaction = discord.utils.find(lambda r: r.emoji == emoji, message.reactions)
+    if reaction is None:
+        return
+    if reaction.count != 1 or not reaction.me:
+        return
+    assert len(message.embeds) == 1
+
+    embed = message.embeds[0]
+    remove_poll_option(embed, emoji)
+    await asyncio.gather(message.edit(embed=embed), reaction.clear())
 
 
 @bot.after_invoke
@@ -274,7 +302,7 @@ async def removeoption(ctx, *, arg):
             "Couldn't find a poll to remove an option from. Did you forget to !startpoll first?", delete_after=10
         )
     embed = last_poll_message.embeds[0]
-    if emoji := remove_poll_option(embed, arg):
+    if emoji := remove_poll_option(embed, option=arg):
         await asyncio.gather(last_poll_message.edit(embed=embed), last_poll_message.clear_reaction(emoji))
     else:
         await ctx.send(f"{ctx.author.mention} Couldn't remove option '{arg}'", delete_after=10)
