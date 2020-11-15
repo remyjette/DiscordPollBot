@@ -46,7 +46,7 @@ class MyHelpCommand(commands.MinimalHelpCommand):
 bot = commands.Bot(
     command_prefix="!",
     help_command=MyHelpCommand(),
-    intents=discord.Intents(guilds=True, guild_reactions=True, messages=True, members=True),
+    intents=discord.Intents(guilds=True, guild_reactions=True, messages=True),
 )
 
 
