@@ -224,6 +224,12 @@ async def startpoll(ctx, *, args):
 
     await ctx.send(embed=embed)
 
+@startpoll.error
+async def startpoll_error(ctx, error):
+    await ctx.message.delete()
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"{ctx.author.mention} You forgot to provide the poll title!", delete_after=10)
+
 
 def get_last_poll_message(ctx):
     return ctx.history().find(lambda m: m.author == ctx.me and len(m.embeds) > 0)
@@ -248,12 +254,19 @@ async def addoption(ctx, *, arg):
     else:
         await ctx.send(f"{ctx.author.mention} Couldn't add option '{arg}'", delete_after=10)
 
+@addoption.error
+async def addoption_error(ctx, error):
+    await ctx.message.delete()
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"{ctx.author.mention} You have to provide the new option when using !addoption", delete_after=10)
+
 
 @bot.command(
     brief="Remove an option from an existing poll",
     help=f"Removes an option to an existing poll.\n\nYou can specify either the letter/number for the option, use the emoji, or just name the text of the option.\n\nExamples:\n!removeoption 3\n!removeoption a\n!removeoption C\n!removeoption :four:\n!removeoption I mispelld this",
     usage="<existing option>",
 )
+@commands.check_any(commands.is_owner(), is_admin())
 async def removeoption(ctx, *, arg):
     last_poll_message = await get_last_poll_message(ctx)
     if last_poll_message is None:
@@ -265,6 +278,12 @@ async def removeoption(ctx, *, arg):
         await asyncio.gather(last_poll_message.edit(embed=embed), last_poll_message.clear_reaction(emoji))
     else:
         await ctx.send(f"{ctx.author.mention} Couldn't remove option '{arg}'", delete_after=10)
+
+@removeoption.error
+async def removeoption_error(ctx, error):
+    await ctx.message.delete()
+    if isinstance(error, commands.MissingRequiredArgument):
+        await ctx.send(f"{ctx.author.mention} You have to provide the option to remove when using !removeoption", delete_after=10)
 
 
 @bot.event
