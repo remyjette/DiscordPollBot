@@ -24,7 +24,7 @@ required_permissions = discord.Permissions(
 # 2) Complain if we don't have permissions
 
 # In arg_types, 'list' is a list of strings
-arg_types = {"title": str, "vote_options": list, "new_options_allowed": bool}
+arg_types = {"title": str, "options": list, "new_options_allowed": bool}
 
 
 
@@ -138,17 +138,6 @@ def remove_poll_option(embed, option=None, emoji=None):
     return emoji
 
 
-def create_poll_embed_from_settings(settings):
-    embed = discord.Embed()
-    if "title" in settings:
-        embed.title = settings["title"]
-    if "vote_options" in settings:
-        for option in settings["vote_options"]:
-            if option:
-                add_poll_option(embed, option)
-    return embed
-
-
 @bot.event
 async def on_raw_reaction_add(payload):
     await bot.wait_until_ready()
@@ -196,7 +185,7 @@ async def cleanup_command(ctx):
 @bot.command(
     brief="Create a new poll",
     help="Creates a new poll",
-    usage="<title> or !startpoll title=Title, vote_options=option1,option2",
+    usage="<title> or !startpoll title=Title, options=option1,option2",
 )
 async def startpoll(ctx, *, args):
     settings = {}
@@ -209,7 +198,7 @@ async def startpoll(ctx, *, args):
     if "title=" in args:
         for name, value in parse_command_args(args).items():
             if name not in arg_types:
-                await ctx.send(f"{ctx.author.mention} Did not understand the option '{name}'", delete_after=10)
+                await ctx.send(f"{ctx.author.mention} Did not understand the argument '{name}'", delete_after=10)
                 return
             if arg_types[name] == list:
                 settings[name] = value.split(",")
@@ -222,14 +211,23 @@ async def startpoll(ctx, *, args):
     else:
         settings["title"] = args
 
-    # TODO: vote_options is currently broken because it doesn't add reactions.
-    if "vote_options" in settings:
-        del settings["vote_options"]
-        await ctx.send(f"{ctx.author.mention} 'vote_options' is coming soon. For now, add poll options with !addoption", delete_after=10)
+    embed = discord.Embed()
+    if "title" in settings:
+        embed.title = settings["title"]
+    embed.add_field(name="Poll created by", value=ctx.author.mention, inline=True)
+    embed.add_field(name="Adding options allowed", value=":white_check_mark:", inline=True)
 
-    embed = create_poll_embed_from_settings(settings)
+    initial_emojis = []
+    if "options" in settings:
+        for option in settings["options"]:
+            if option:
+                if emoji := add_poll_option(embed, option):
+                    initial_emojis.append(emoji)
 
-    await ctx.send(embed=embed)
+    message = await ctx.send(embed=embed)
+    if initial_emojis:
+        await asyncio.gather(*(message.add_reaction(emoji) for emoji in initial_emojis))
+
 
 @startpoll.error
 async def startpoll_error(ctx, error):
