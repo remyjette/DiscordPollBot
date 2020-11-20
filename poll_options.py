@@ -15,23 +15,23 @@ def add_poll_option(embed, option):
     description_lines = embed.description.split("\n")
 
     if len(description_lines) >= 20:
-        # Discord has a limit of 20 reactions per message. If we're already at 20, one will need to be removed first.
-        return None
+        raise PollOptionException(
+            "Discord only allows 20 reactions per message. One will need to be removed to add another option."
+        )
 
     # Make sure we don't already have this option
     for line in description_lines:
         last_seen_emoji, last_seen_option = line.split(" ", maxsplit=1)
         if option == last_seen_option:
-            return None
+            raise PollOptionException(f"Option '{option}' already exists in this poll.")
         if len(last_seen_emoji) != 1:
-            return None
+            raise PollOptionException("This poll is from an older version of this bot and cannot be added to.")
+        # TODO should probably make sure the .split() above worked, that last_seen_emoji is in allowed_emoji
 
     if last_seen_emoji == EMOJI_Z:
-        # We have no more letters to use, so no more options can be added to this poll even if options are removed.
-        return None
+        raise PollOptionException(f"Vote option {EMOJI_Z} is already in use. It will need to be removed to add another option.")
 
     new_option_emoji = chr(ord(last_seen_emoji) + 1)
-    assert new_option_emoji is not None
 
     description_lines.append(new_option_emoji + " " + option)
 

@@ -104,8 +104,13 @@ class Commands(commands.Cog):
         if "options" in settings:
             for option in settings["options"]:
                 if option:
-                    if emoji := add_poll_option(embed, option):
+                    try:
+                        emoji = add_poll_option(embed, option)
                         initial_emojis.append(emoji)
+                    except PollOptionException:
+                        # During !startpoll, add_option should only fail if the user provides a duplicate or more than
+                        # 20 options. For now, just silently strip duplicates and any options past 20.
+                        pass
 
         message = await ctx.send(embed=embed)
         if initial_emojis:
@@ -140,10 +145,11 @@ class Commands(commands.Cog):
                 )
                 return
         embed = poll_message.embeds[0]
-        if emoji := add_poll_option(embed, arg):
+        try:
+            emoji = add_poll_option(embed, arg)
             await asyncio.gather(poll_message.edit(embed=embed), poll_message.add_reaction(emoji))
-        else:
-            await ctx.send(f"{ctx.author.mention} Couldn't add option '{arg}'", delete_after=10)
+        except PollOptionException as e:
+            await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)
 
     @addoption.error
     async def addoption_error(self, ctx, error):
@@ -179,10 +185,9 @@ class Commands(commands.Cog):
         embed = poll_message.embeds[0]
         try:
             emoji = remove_poll_option(embed, option=arg)
+            await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
         except PollOptionException as e:
-            await ctx.send(f"{ctx.author.mention} {e}", delete_after=10)
-            return
-        await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
+            await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)
 
     @removeoption.error
     async def removeoption_error(self, ctx, error):
