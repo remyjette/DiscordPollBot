@@ -246,16 +246,23 @@ def get_last_poll_message(ctx):
     usage="<new option>",
 )
 async def addoption(ctx, *, arg):
-    last_poll_message = await get_last_poll_message(ctx)
-    if last_poll_message is None:
-        await ctx.send(
-            f"{ctx.author.mention} Couldn't find a poll to add an option to. Did you forget to !startpoll first?",
-            delete_after=10,
-        )
-        return
-    embed = last_poll_message.embeds[0]
+    if ctx.message.reference is not None: # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
+        poll_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        if poll_message.author != bot.user or not poll_message.embeds:
+            await ctx.send(
+                f"{ctx.author.mention} Can't !addoption to that message, it's not a poll!", delete_after=10
+            )
+            return
+    else:
+        poll_message = await get_last_poll_message(ctx)
+        if poll_message is None:
+            await ctx.send(
+                f"{ctx.author.mention} Couldn't find a poll to remove an option from. Did you forget to !startpoll first?", delete_after=10
+            )
+            return
+    embed = poll_message.embeds[0]
     if emoji := add_poll_option(embed, arg):
-        await asyncio.gather(last_poll_message.edit(embed=embed), last_poll_message.add_reaction(emoji))
+        await asyncio.gather(poll_message.edit(embed=embed), poll_message.add_reaction(emoji))
     else:
         await ctx.send(f"{ctx.author.mention} Couldn't add option '{arg}'", delete_after=10)
 
@@ -273,14 +280,23 @@ async def addoption_error(ctx, error):
 )
 @commands.check_any(commands.is_owner(), is_admin())
 async def removeoption(ctx, *, arg):
-    last_poll_message = await get_last_poll_message(ctx)
-    if last_poll_message is None:
-        await ctx.send(
-            "Couldn't find a poll to remove an option from. Did you forget to !startpoll first?", delete_after=10
-        )
-    embed = last_poll_message.embeds[0]
+    if ctx.message.reference is not None: # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
+        poll_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
+        if poll_message.author != bot.user or not poll_message.embeds:
+            await ctx.send(
+                f"{ctx.author.mention} Can't !addoption to that message, it's not a poll!", delete_after=10
+            )
+            return
+    else:
+        poll_message = await get_last_poll_message(ctx)
+        if poll_message is None:
+            await ctx.send(
+                f"{ctx.author.mention} Couldn't find a poll to remove an option from. Did you forget to !startpoll first?", delete_after=10
+            )
+            return
+    embed = poll_message.embeds[0]
     if emoji := remove_poll_option(embed, option=arg):
-        await asyncio.gather(last_poll_message.edit(embed=embed), last_poll_message.clear_reaction(emoji))
+        await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
     else:
         await ctx.send(f"{ctx.author.mention} Couldn't remove option '{arg}'", delete_after=10)
 
