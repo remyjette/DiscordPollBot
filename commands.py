@@ -1,8 +1,10 @@
 import asyncio
 import discord
+import string
 from discord.ext import commands
+from shlex import shlex
+from emoji import EMOJI_Z
 from poll_options import add_poll_option, remove_poll_option
-from utils import EMOJI_Z, parse_command_args
 
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
@@ -26,6 +28,13 @@ def is_admin_check():
         return ctx.guild is not None and ctx.author.guild_permissions.administrator
 
     return commands.check(predicate)
+
+
+def parse_command_args(text):
+    lexer = shlex(text, posix=True)
+    lexer.whitespace = " "
+    lexer.wordchars += string.punctuation
+    return dict(word.split("=", maxsplit=1) for word in lexer)
 
 
 class DiscordBotHelpCommand(commands.MinimalHelpCommand):

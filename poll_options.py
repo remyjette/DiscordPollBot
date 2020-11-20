@@ -1,10 +1,10 @@
 import discord
-from utils import EMOJI_A, EMOJI_Z, NUMBER_TO_EMOJI_UNICODE, emoji_to_number, number_to_emoji
+from emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 
 
 def add_poll_option(embed, option):
     if embed.description == discord.Embed.Empty:
-        new_option_emoji = number_to_emoji(1)
+        new_option_emoji = EMOJI_A
         embed.description = new_option_emoji + " " + option
         return new_option_emoji
 
@@ -19,12 +19,14 @@ def add_poll_option(embed, option):
         last_seen_emoji, last_seen_option = line.split(" ", maxsplit=1)
         if option == last_seen_option:
             return None
+        if len(last_seen_emoji) != 1:
+            return None
 
     if last_seen_emoji == EMOJI_Z:
         # We have no more letters to use, so no more options can be added to this poll even if options are removed.
         return None
 
-    new_option_emoji = number_to_emoji(emoji_to_number(last_seen_emoji) + 1)
+    new_option_emoji = chr(ord(last_seen_emoji) + 1)
     assert new_option_emoji is not None
 
     description_lines.append(new_option_emoji + " " + option)
@@ -36,14 +38,11 @@ def add_poll_option(embed, option):
 def remove_poll_option(embed, option=None, emoji=None):
     assert option or emoji
 
-    if not emoji:
-        if emoji_to_number(option) is not None:
+    if not emoji and len(option) == 1:
+        if option in allowed_emoji:
             emoji = option
             option = None
-        elif len(option) == 1 and option.isdigit():
-            emoji = option + NUMBER_TO_EMOJI_UNICODE
-            option = None
-        elif len(option) == 1 and ord("A") <= (option_ord := ord(option.upper())) <= ord("Z"):
+        elif ord("A") <= (option_ord := ord(option.upper())) <= ord("Z"):
             emoji = chr(ord(EMOJI_A) + option_ord - ord("A"))
             option = None
 
