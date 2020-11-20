@@ -2,6 +2,10 @@ import discord
 from emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 
 
+class PollOptionException(Exception):
+    pass
+
+
 def add_poll_option(embed, option):
     if embed.description == discord.Embed.Empty:
         new_option_emoji = EMOJI_A
@@ -36,7 +40,7 @@ def add_poll_option(embed, option):
 
 
 def remove_poll_option(embed, option=None, emoji=None):
-    assert option or emoji
+    assert bool(option) ^ bool(emoji)
 
     if not emoji and len(option) == 1:
         if option in allowed_emoji:
@@ -65,6 +69,9 @@ def remove_poll_option(embed, option=None, emoji=None):
     embed.description = "\n".join(filtered_lines(embed.description.split("\n")))
 
     if embed.description == before:
-        return None
+        message = f"This poll doesn't have an option '{option or emoji}' to remove."
+        if option:
+            message += " You could also try specifying option's letter instead (`!removeoption A`)"
+        raise PollOptionException(message)
 
     return emoji

@@ -4,7 +4,7 @@ import string
 from discord.ext import commands
 from shlex import shlex
 from emoji import EMOJI_Z
-from poll_options import add_poll_option, remove_poll_option
+from poll_options import add_poll_option, remove_poll_option, PollOptionException
 
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
@@ -177,10 +177,12 @@ class Commands(commands.Cog):
                 )
                 return
         embed = poll_message.embeds[0]
-        if emoji := remove_poll_option(embed, option=arg):
-            await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
-        else:
-            await ctx.send(f"{ctx.author.mention} Couldn't remove option '{arg}'", delete_after=10)
+        try:
+            emoji = remove_poll_option(embed, option=arg)
+        except PollOptionException as e:
+            await ctx.send(f"{ctx.author.mention} {e}", delete_after=10)
+            return
+        await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
 
     @removeoption.error
     async def removeoption_error(self, ctx, error):

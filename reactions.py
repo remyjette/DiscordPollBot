@@ -2,7 +2,7 @@ import asyncio
 import discord
 import sys
 from discord.ext import commands
-from poll_options import remove_poll_option
+from poll_options import remove_poll_option, PollOptionException
 
 
 class Reactions(commands.Cog):
@@ -40,7 +40,8 @@ class Reactions(commands.Cog):
             return
         if reaction.count != 1 or not reaction.me:
             return
-        assert len(message.embeds) == 1
+        if not message.embeds:
+            return
 
         embed = message.embeds[0]
         remove_poll_option(embed, emoji)
