@@ -215,7 +215,7 @@ async def startpoll(ctx, *, args):
     if "title" in settings:
         embed.title = settings["title"]
     embed.add_field(name="Poll created by", value=ctx.author.mention, inline=True)
-    embed.add_field(name="Adding options allowed", value=":white_check_mark:", inline=True)
+    embed.set_footer(text="Add new options to this poll with !addoption")
 
     initial_emojis = []
     if "options" in settings:
