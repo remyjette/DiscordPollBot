@@ -10,14 +10,12 @@ from reactions import Reactions
 
 # TODOS:
 # 1) what if I want a comma in a vote option?
-# 2) Complain if we don't have permissions
 
 bot = commands.Bot(
     command_prefix="!",
     help_command=DiscordBotHelpCommand(),
     intents=discord.Intents(guilds=True, guild_reactions=True, messages=True),
 )
-
 
 @bot.event
 async def on_ready():

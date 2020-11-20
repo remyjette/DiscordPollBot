@@ -9,7 +9,7 @@ from poll_options import add_poll_option, remove_poll_option, PollOptionExceptio
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
     send_messages=True,  # To send the poll message
-    manage_messages=True,  # To clear invalid reacts from users
+    manage_messages=True,  # To clear invalid reacts from users and delete command messages after they are processed
     embed_links=True,  # To embed the poll as a rich content card
     read_message_history=True,  # To find the poll when a user does !addoption or !removeoption
     add_reactions=True,  # To add the initial reactions for users to be able to click on to vote
@@ -56,8 +56,40 @@ class Commands(commands.Cog):
         self.bot = bot
         self.bot.help_command.cog = self
 
+    async def cog_check(self, ctx):
+        if not ctx.channel.permissions_for(ctx.me).is_superset(required_permissions):
+            await ctx.send(
+                "Error: Some required permissions are missing. Someone with the 'Manage Server' permission will need"
+                " to resolve the issue before this bot can be used.",
+                delete_after=20,
+            )
+            return False
+        return True
+
     async def cog_after_invoke(self, ctx):
         await ctx.message.delete()
+
+    async def cog_command_error(self, ctx, error):
+        if isinstance(error, commands.MissingRequiredArgument):
+            if ctx.command == self.startpoll:
+                message = "You forgot to provide the poll title!"
+            elif ctx.command == self.addoption:
+                message = "You have to provide the new option when using !addoption"
+            elif ctx.command == self.removeoption:
+                message = "You have to provide the option to remove when using !removeoption"
+            await asyncio.gather(
+                ctx.message.delete(),
+                ctx.send(f"{ctx.author.mention} {message}", delete_after=10),
+            )
+        if isinstance(error, commands.CheckFailure):
+            # If this is the global bot permissions check, we already notified the channel. If this is a user trying
+            # to use a command they don't have permissions for, just swallow the exception.
+            try:
+                await ctx.message.delete()
+            except:
+                pass
+            return
+        raise error
 
     @commands.command()
     @commands.check_any(commands.is_owner(), is_admin_check())
@@ -116,12 +148,6 @@ class Commands(commands.Cog):
         if initial_emojis:
             await asyncio.gather(*(message.add_reaction(emoji) for emoji in initial_emojis))
 
-    @startpoll.error
-    async def startpoll_error(self, ctx, error):
-        await ctx.message.delete()
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(f"{ctx.author.mention} You forgot to provide the poll title!", delete_after=10)
-
     @commands.command(
         brief="Add an option to an existing poll",
         help=f"Adds a new option to an existing poll.\n\nThere must be fewer than 20 existing options, and {EMOJI_Z} must not already be in use.\n\nExample: !addoption Pizza Bagels",
@@ -150,14 +176,6 @@ class Commands(commands.Cog):
             await asyncio.gather(poll_message.edit(embed=embed), poll_message.add_reaction(emoji))
         except PollOptionException as e:
             await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)
-
-    @addoption.error
-    async def addoption_error(self, ctx, error):
-        await ctx.message.delete()
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(
-                f"{ctx.author.mention} You have to provide the new option when using !addoption", delete_after=10
-            )
 
     @commands.command(
         brief="Remove an option from an existing poll",
@@ -188,12 +206,3 @@ class Commands(commands.Cog):
             await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
         except PollOptionException as e:
             await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)
-
-    @removeoption.error
-    async def removeoption_error(self, ctx, error):
-        await ctx.message.delete()
-        if isinstance(error, commands.MissingRequiredArgument):
-            await ctx.send(
-                f"{ctx.author.mention} You have to provide the option to remove when using !removeoption",
-                delete_after=10,
-            )
