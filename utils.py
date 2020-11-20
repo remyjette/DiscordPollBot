@@ -1,13 +1,17 @@
 import itertools
+import string
+from shlex import shlex
 
 EMOJI_A = "\N{REGIONAL INDICATOR SYMBOL LETTER A}"
 EMOJI_Z = "\N{REGIONAL INDICATOR SYMBOL LETTER Z}"
 NUMBER_TO_EMOJI_UNICODE = "\N{VARIATION SELECTOR-16}\N{COMBINING ENCLOSING KEYCAP}"
 
-allowed_emoji = list(itertools.chain(
-    (str(number) + NUMBER_TO_EMOJI_UNICODE for number in range(0, 10)),
-    (chr(codepoint) for codepoint in range(ord(EMOJI_A), ord(EMOJI_Z) + 1))
-))
+allowed_emoji = list(
+    itertools.chain(
+        (str(number) + NUMBER_TO_EMOJI_UNICODE for number in range(0, 10)),
+        (chr(codepoint) for codepoint in range(ord(EMOJI_A), ord(EMOJI_Z) + 1)),
+    )
+)
 
 
 def number_to_emoji(num):
@@ -28,3 +32,10 @@ def emoji_to_number(emoji_str, strict=True):
         return ord(emoji_str[0]) - ord(EMOJI_A) + 10
 
     return None
+
+
+def parse_command_args(text):
+    lexer = shlex(text, posix=True)
+    lexer.whitespace = " "
+    lexer.wordchars += string.punctuation
+    return dict(word.split("=", maxsplit=1) for word in lexer)
