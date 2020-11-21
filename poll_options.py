@@ -24,8 +24,6 @@ def add_poll_option(embed, option):
         last_seen_emoji, last_seen_option = line.split(" ", maxsplit=1)
         if option == last_seen_option:
             raise PollOptionException(f"Option '{option}' already exists in this poll.")
-        if len(last_seen_emoji) != 1:
-            raise PollOptionException("This poll is from an older version of this bot and cannot be added to.")
         # TODO should probably make sure the .split() above worked, that last_seen_emoji is in allowed_emoji
 
     if last_seen_emoji == EMOJI_Z:
