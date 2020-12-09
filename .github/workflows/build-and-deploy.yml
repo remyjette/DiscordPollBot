@@ -11,20 +11,25 @@ jobs:
     - name: 'Checkout repo'
       uses: actions/checkout@master
 
-    - name: Determine image name
-      id: image-name
-      run: |
-        REPOSITORY_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-        echo "::set-output name=IMAGE_NAME::$REPOSITORY_LOWER/discord-poll-bot"
-
-    - name: Build and push to GitHub Packages
-      uses: docker/build-push-action@v1
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v1
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v1
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v1
       with:
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-        registry: docker.pkg.github.com
-        repository: ${{ steps.image-name.outputs.IMAGE_NAME }}
-        tag_with_ref: true
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.CR_PAT }}
+
+    - name: Build and push to GitHub Container Registry
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ghcr.io/${{ github.repository_owner }}/discord-poll-bot:latest
 
     - name: 'Login via Azure CLI'
       uses: azure/login@v1
@@ -36,10 +41,7 @@ jobs:
       with:
         resource-group: ${{ secrets.RESOURCE_GROUP }}
         dns-name-label: ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }}
-        image: docker.pkg.github.com/${{ steps.image-name.outputs.IMAGE_NAME }}:latest
-        registry-login-server: docker.pkg.github.com
-        registry-username: ${{ github.actor }}
-        registry-password: ${{ secrets.GITHUB_TOKEN }}
+        image: ghcr.io/${{ github.repository_owner }}/discord-poll-bot:latest
         name: discord-poll-bot
         location: 'west us'
         secure-environment-variables: DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
