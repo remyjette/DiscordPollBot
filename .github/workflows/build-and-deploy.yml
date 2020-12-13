@@ -43,7 +43,7 @@ jobs:
         dns-name-label: ${{ secrets.RESOURCE_GROUP }}${{ github.run_number }}
         image: ghcr.io/${{ github.repository_owner }}/discord-poll-bot:latest
         name: discord-poll-bot
-        location: 'west us'
+        location: 'west us 2'
         secure-environment-variables: DISCORD_TOKEN=${{ secrets.DISCORD_TOKEN }}
         memory: 0.5
         cpu: 1
