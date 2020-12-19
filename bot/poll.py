@@ -3,6 +3,7 @@ import discord
 import re
 import bot
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
+from .utils import remove_mentions
 
 
 class PollException(Exception):
@@ -77,9 +78,10 @@ class Poll():
 
     @classmethod
     async def start(cls, channel, creator, settings):
+        assert "title" in settings
+
         embed = discord.Embed()
-        if "title" in settings:
-            embed.title = settings["title"]
+        embed.title = remove_mentions(settings["title"], guild=channel.guild)
         embed.add_field(name="Poll created by", value=creator.mention, inline=True)
         embed.set_footer(text="Add new options to this poll with !addoption")
 
