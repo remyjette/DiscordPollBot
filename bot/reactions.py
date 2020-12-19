@@ -2,23 +2,22 @@ import asyncio
 import discord
 import sys
 from discord.ext import commands
-from emoji import allowed_emoji
-from poll_options import remove_poll_option, PollOptionException
+
+import bot
+from .emoji import allowed_emoji
+from .poll_options import remove_poll_option, PollOptionException
 
 
 class Reactions(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        await self.bot.wait_until_ready()
+        await bot.instance.wait_until_ready()
 
-        if payload.user_id == self.bot.user.id:
+        if payload.user_id == bot.instance.user.id:
             return
-        channel = self.bot.get_channel(payload.channel_id)
+        channel = bot.instance.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != self.bot.user:
+        if message.author != bot.instance.user:
             return
 
         for reaction in message.reactions:
@@ -27,11 +26,11 @@ class Reactions(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
-        await self.bot.wait_until_ready()
+        await bot.instance.wait_until_ready()
 
-        channel = self.bot.get_channel(payload.channel_id)
+        channel = bot.instance.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != self.bot.user:
+        if message.author != bot.instance.user:
             return
         emoji = payload.emoji.name
         reaction = discord.utils.find(lambda r: r.emoji == emoji, message.reactions)
@@ -39,7 +38,7 @@ class Reactions(commands.Cog):
         if not message.embeds:
             return
 
-        elif reaction and payload.user_id == self.bot.user.id:
+        elif reaction and payload.user_id == bot.instance.user.id:
             # Someone used 'Manage Messages' to clear our reaction when someone has an existing vote for this option!
             # Add our reaction back, they should use !removeoption instead.
             await message.add_reaction(emoji)
@@ -57,15 +56,15 @@ class Reactions(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_clear_emoji(self, payload):
-        await self.bot.wait_until_ready()
+        await bot.instance.wait_until_ready()
 
         emoji = payload.emoji.name
         if emoji not in allowed_emoji:
             return
 
-        channel = self.bot.get_channel(payload.channel_id)
+        channel = bot.instance.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != self.bot.user:
+        if message.author != bot.instance.user:
             return
         if not message.embeds:
             return
@@ -79,11 +78,11 @@ class Reactions(commands.Cog):
 
     @commands.Cog.listener()
     async def on_raw_reaction_clear(self, payload):
-        await self.bot.wait_until_ready()
+        await bot.instance.wait_until_ready()
 
-        channel = self.bot.get_channel(payload.channel_id)
+        channel = bot.instance.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != self.bot.user:
+        if message.author != bot.instance.user:
             return
         elif not message.embeds:
             return

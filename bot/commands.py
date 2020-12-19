@@ -3,8 +3,10 @@ import discord
 import string
 from discord.ext import commands
 from shlex import shlex
-from emoji import EMOJI_Z
-from poll_options import add_poll_option, remove_poll_option, PollOptionException
+
+import bot
+from .emoji import EMOJI_Z
+from .poll_options import add_poll_option, remove_poll_option, PollOptionException
 
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
@@ -51,9 +53,8 @@ class DiscordBotHelpCommand(commands.MinimalHelpCommand):
 
 
 class Commands(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-        self.bot.help_command.cog = self
+    def __init__(self):
+        bot.instance.help_command.cog = self
 
     async def cog_check(self, ctx):
         if not ctx.channel.permissions_for(ctx.me).is_superset(required_permissions):

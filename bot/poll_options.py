@@ -1,5 +1,5 @@
 import discord
-from emoji import allowed_emoji, EMOJI_A, EMOJI_Z
+from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 
 
 class PollOptionException(Exception):
