@@ -8,9 +8,6 @@ from discord.ext import commands
 from .commands import Commands, DiscordBotHelpCommand
 from .reactions import Reactions
 
-# TODOS:
-# 1) what if I want a comma in a vote option?
-
 bot.instance = commands.Bot(
     command_prefix="!",
     help_command=DiscordBotHelpCommand(),
