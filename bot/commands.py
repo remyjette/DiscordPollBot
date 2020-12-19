@@ -52,8 +52,10 @@ async def get_poll_for_context(ctx):
 
 class DiscordBotHelpCommand(commands.MinimalHelpCommand):
     def get_ending_note(self):
-        return "Like this bot? Add it to your own servers by clicking " + discord.utils.oauth_url(
-            self.context.bot.user.id, required_permissions
+        return (
+            "Like this bot? Add it to your own servers by clicking "
+            f"<https://discord.com/oauth2/authorize?client_id={self.context.bot.user.id}"
+            f"&scope=bot%20applications.commands&permissions={required_permissions.value}>"
         )
 
     async def send_pages(self):
