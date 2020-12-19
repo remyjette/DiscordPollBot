@@ -66,12 +66,22 @@ class SlashCommands(commands.Cog):
                 await session.post(url, json={"type": 2})  # Type 2 is Acknowledge
             settings = {}
             settings["title"] = next(o for o in interaction["data"]["options"] if o["name"] == "title")["value"]
+
             channel = bot.instance.get_channel(interaction["channel_id"]) or await bot.instance.fetch_channel(
                 interaction["channel_id"]
             )
             user = bot.instance.get_user(interaction["member"]["user"]["id"]) or await bot.instance.fetch_user(
                 interaction["member"]["user"]["id"]
             )
+
+            if not channel or not user:
+                return
+
+            if not settings["title"]:
+                # This should never happen as "title" is a required arg, but right now there's a bug in mobile Discord
+                # where it's allowing commands to be sent even when missing required args.
+                await channel.send(f"{ctx.author.mention} You forgot to provide the poll title!", delete_after=10),
+                return
 
             options_data = sorted(
                 (o for o in interaction["data"]["options"] if o["name"].startswith("option_")), key=lambda o: o["name"]

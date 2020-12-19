@@ -80,7 +80,7 @@ class Poll:
 
     @classmethod
     async def start(cls, channel, creator, settings):
-        assert "title" in settings
+        assert settings.get("title", None)
 
         embed = discord.Embed()
         embed.title = remove_mentions(settings["title"], guild=channel.guild)
