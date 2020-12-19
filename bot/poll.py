@@ -94,7 +94,7 @@ class Poll:
                     try:
                         emoji = _add_option_to_embed(embed, option)
                         initial_emojis.append(emoji)
-                    except PollOptionException:
+                    except PollException:
                         # During !startpoll, add_option should only fail if the user provides a duplicate or more than
                         # 20 options. For now, just silently strip duplicates and any options past 20.
                         pass
