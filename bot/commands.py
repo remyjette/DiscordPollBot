@@ -40,22 +40,20 @@ async def get_poll_for_context(ctx):
     if ctx.message.reference is not None:
         # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
         poll = await Poll.get_from_reply(
-            ctx.message,
-            response_on_fail=f"{ctx.author.mention} Can't {command_str} that message, it's not a poll!"
+            ctx.message, response_on_fail=f"{ctx.author.mention} Can't {command_str} that message, it's not a poll!"
         )
     else:
         poll = await Poll.get_most_recent(
             ctx.channel,
-            response_on_fail=f"{ctx.author.mention} Couldn't find a poll in this channel for {command_str}. Did you forget to !startpoll first?"
+            response_on_fail=f"{ctx.author.mention} Couldn't find a poll in this channel for {command_str}. Did you forget to !startpoll first?",
         )
     return poll
 
 
 class DiscordBotHelpCommand(commands.MinimalHelpCommand):
     def get_ending_note(self):
-        return (
-            "Like this bot? Add it to your own servers by clicking "
-            + discord.utils.oauth_url(self.context.bot.user.id, required_permissions)
+        return "Like this bot? Add it to your own servers by clicking " + discord.utils.oauth_url(
+            self.context.bot.user.id, required_permissions
         )
 
     async def send_pages(self):

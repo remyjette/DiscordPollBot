@@ -10,17 +10,19 @@ class PollException(Exception):
     pass
 
 
-class Poll():
+class Poll:
     def __init__(self, poll_message):
         self.message = poll_message
 
     @property
     def creator(self):
-        created_by_field = next((field for field in self.message.embeds[0].fields if field.name == "Poll created by"), None)
+        created_by_field = next(
+            (field for field in self.message.embeds[0].fields if field.name == "Poll created by"), None
+        )
         if not created_by_field:
             return None
         try:
-            created_by_user_id = int(re.search(r'\d+', created_by_field.value).group())
+            created_by_user_id = int(re.search(r"\d+", created_by_field.value).group())
         except TypeError:
             return None
 
@@ -150,7 +152,9 @@ def _add_option_to_embed(embed, option):
         # TODO should probably make sure the .split() above worked, that last_seen_emoji is in allowed_emoji
 
     if last_seen_emoji == EMOJI_Z:
-        raise PollException(f"Vote option {EMOJI_Z} is already in use. It will need to be removed to add another option.")
+        raise PollException(
+            f"Vote option {EMOJI_Z} is already in use. It will need to be removed to add another option."
+        )
 
     new_option_emoji = chr(ord(last_seen_emoji) + 1)
 

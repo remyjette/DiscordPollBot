@@ -14,6 +14,7 @@ bot.instance = commands.Bot(
     intents=discord.Intents(guilds=True, guild_reactions=True, messages=True),
 )
 
+
 @bot.instance.event
 async def on_ready():
     print("Ready")

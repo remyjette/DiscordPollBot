@@ -1,6 +1,7 @@
 import re
 import bot
 
+
 def remove_mentions(str, guild=None):
     def replace_id_string_with_username(id_string):
         user = bot.instance.get_user(int(id_string))
