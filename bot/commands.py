@@ -6,7 +6,7 @@ from shlex import shlex
 
 import bot
 from .emoji import EMOJI_Z
-from .poll_options import add_poll_option, remove_poll_option, PollOptionException
+from .poll import Poll, PollException
 
 required_permissions = discord.Permissions(
     read_messages=True,  # To see commands sent by users
@@ -21,10 +21,6 @@ required_permissions = discord.Permissions(
 arg_types = {"title": str, "options": list, "new_options_allowed": bool}
 
 
-def get_last_poll_message(ctx):
-    return ctx.history().find(lambda m: m.author == ctx.me and len(m.embeds) > 0)
-
-
 def is_admin_check():
     def predicate(ctx):
         return ctx.guild is not None and ctx.author.guild_permissions.administrator
@@ -37,6 +33,22 @@ def parse_command_args(text):
     lexer.whitespace = " "
     lexer.wordchars += string.punctuation
     return dict(word.split("=", maxsplit=1) for word in lexer)
+
+
+async def get_poll_for_context(ctx):
+    command_str = ctx.prefix + ctx.invoked_with
+    if ctx.message.reference is not None:
+        # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
+        poll = await Poll.get_from_reply(
+            ctx.message,
+            response_on_fail=f"{ctx.author.mention} Can't {command_str} that message, it's not a poll!"
+        )
+    else:
+        poll = await Poll.get_most_recent(
+            ctx.channel,
+            response_on_fail=f"{ctx.author.mention} Couldn't find a poll in this channel for {command_str}. Did you forget to !startpoll first?"
+        )
+    return poll
 
 
 class DiscordBotHelpCommand(commands.MinimalHelpCommand):
@@ -125,28 +137,7 @@ class Commands(commands.Cog):
                     raise RuntimeError(f"Don't understand type '{arg_types[name].__name__}' for arg '{name}'")
         else:
             settings["title"] = args
-
-        embed = discord.Embed()
-        if "title" in settings:
-            embed.title = settings["title"]
-        embed.add_field(name="Poll created by", value=ctx.author.mention, inline=True)
-        embed.set_footer(text="Add new options to this poll with !addoption")
-
-        initial_emojis = []
-        if "options" in settings:
-            for option in settings["options"]:
-                if option:
-                    try:
-                        emoji = add_poll_option(embed, option)
-                        initial_emojis.append(emoji)
-                    except PollOptionException:
-                        # During !startpoll, add_option should only fail if the user provides a duplicate or more than
-                        # 20 options. For now, just silently strip duplicates and any options past 20.
-                        pass
-
-        message = await ctx.send(embed=embed)
-        if initial_emojis:
-            await asyncio.gather(*(message.add_reaction(emoji) for emoji in initial_emojis))
+        await Poll.start(ctx.channel, ctx.author, settings)
 
     @commands.command(
         brief="Add an option to an existing poll",
@@ -154,27 +145,11 @@ class Commands(commands.Cog):
         usage="<new option>",
     )
     async def addoption(self, ctx, *, arg):
-        if ctx.message.reference is not None:
-            # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
-            poll_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-            if poll_message.author != ctx.me or not poll_message.embeds:
-                await ctx.send(
-                    f"{ctx.author.mention} Can't !addoption to that message, it's not a poll!", delete_after=10
-                )
-                return
-        else:
-            poll_message = await get_last_poll_message(ctx)
-            if poll_message is None:
-                await ctx.send(
-                    f"{ctx.author.mention} Couldn't find a poll to an option to. Did you forget to !startpoll first?",
-                    delete_after=10,
-                )
-                return
-        embed = poll_message.embeds[0]
+        if not (poll := await get_poll_for_context(ctx)):
+            return
         try:
-            emoji = add_poll_option(embed, arg)
-            await asyncio.gather(poll_message.edit(embed=embed), poll_message.add_reaction(emoji))
-        except PollOptionException as e:
+            await poll.add_option(arg)
+        except PollException as e:
             await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)
 
     @commands.command(
@@ -184,25 +159,9 @@ class Commands(commands.Cog):
     )
     @commands.check_any(commands.is_owner(), is_admin_check())
     async def removeoption(self, ctx, *, arg):
-        if ctx.message.reference is not None:
-            # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
-            poll_message = await ctx.channel.fetch_message(ctx.message.reference.message_id)
-            if poll_message.author != ctx.me or not poll_message.embeds:
-                await ctx.send(
-                    f"{ctx.author.mention} Can't !addoption to that message, it's not a poll!", delete_after=10
-                )
-                return
-        else:
-            poll_message = await get_last_poll_message(ctx)
-            if poll_message is None:
-                await ctx.send(
-                    f"{ctx.author.mention} Couldn't find a poll to remove an option from. Did you forget to !startpoll first?",
-                    delete_after=10,
-                )
-                return
-        embed = poll_message.embeds[0]
+        if not (poll := await get_poll_for_context(ctx)):
+            return
         try:
-            emoji = remove_poll_option(embed, option=arg)
-            await asyncio.gather(poll_message.edit(embed=embed), poll_message.clear_reaction(emoji))
-        except PollOptionException as e:
+            await poll.remove_option(option=arg)
+        except PollException as e:
             await ctx.send(f"{ctx.author.mention} Error: {e}", delete_after=10)

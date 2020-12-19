@@ -5,7 +5,7 @@ from discord.ext import commands
 
 import bot
 from .emoji import allowed_emoji
-from .poll_options import remove_poll_option, PollOptionException
+from .poll import Poll, PollException
 
 
 class Reactions(commands.Cog):
@@ -53,7 +53,6 @@ class Reactions(commands.Cog):
             # as if reaction.clear() were called which will remove the poll option from the message text.
             await self.on_raw_reaction_clear_emoji(payload)
 
-
     @commands.Cog.listener()
     async def on_raw_reaction_clear_emoji(self, payload):
         await bot.instance.wait_until_ready()
@@ -69,12 +68,11 @@ class Reactions(commands.Cog):
         if not message.embeds:
             return
 
-        embed = message.embeds[0]
+        poll = Poll(message)
         try:
-            remove_poll_option(embed, emoji)
-        except PollOptionException:
+            await poll.remove_option(emoji=emoji)
+        except PollException:
             pass
-        await message.edit(embed=embed)
 
     @commands.Cog.listener()
     async def on_raw_reaction_clear(self, payload):
