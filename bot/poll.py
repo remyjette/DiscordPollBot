@@ -11,8 +11,9 @@ class PollException(Exception):
 
 
 class Poll:
-    def __init__(self, poll_message):
+    def __init__(self, poll_message, current_user):
         self.message = poll_message
+        self.current_user = current_user
 
     @property
     def creator(self):
@@ -26,12 +27,29 @@ class Poll:
         except TypeError:
             return None
 
-        return bot.instance.get_user(created_by_user_id)
+        return bot.instance.get_user(created_by_user_id)  # Need to make this async with a fetch backup
 
     async def add_option(self, option):
         embed = self.message.embeds[0]
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
+        if not self.current_user:
+            return
+        # Refresh message to see if user reacted
+        def check(payload):
+            return (
+                payload.message_id == self.message.id
+                and payload.user_id == self.current_user.id
+                and payload.emoji.name == emoji
+            )
+
+        try:
+            await bot.instance.wait_for("raw_reaction_add", timeout=30, check=check)
+        except asyncio.TimeoutError:
+            await self.message.channel.send(
+                f"{self.current_user.mention} Thanks for adding `{option}` to the poll, but don't forget to vote for it!",
+                delete_after=10,
+            )
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
@@ -102,19 +120,19 @@ class Poll:
         message = await channel.send(embed=embed)
         if initial_emojis:
             await asyncio.gather(*(message.add_reaction(emoji) for emoji in initial_emojis))
-        return cls(message)
+        return cls(message, creator)
 
     @classmethod
-    async def get_most_recent(cls, channel, response_on_fail=None):
+    async def get_most_recent(cls, channel, current_user, response_on_fail=None):
         message = await channel.history().find(lambda m: m.author == bot.instance.user and len(m.embeds) > 0)
         if message is None:
             if response_on_fail:
                 await channel.send(response_on_fail, delete_after=10)
             return None
-        return cls(message)
+        return cls(message, current_user)
 
     @classmethod
-    async def get_from_reply(cls, message, response_on_fail=None):
+    async def get_from_reply(cls, message, current_user, response_on_fail=None):
         if message.reference is None:
             raise RuntimeError("get_from_reply() was called on a message that didn't have a reply")
         # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
@@ -123,7 +141,7 @@ class Poll:
             if response_on_fail:
                 await message.channel.send(response_on_fail, delete_after=10)
             return None
-        return cls(replied_to_message)
+        return cls(replied_to_message, current_user)
 
 
 def _add_option_to_embed(embed, option):

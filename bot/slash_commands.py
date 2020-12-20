@@ -164,6 +164,7 @@ class SlashCommands(commands.Cog):
     async def _handle_addoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(
             channel,
+            current_user=user,
             response_on_fail=f"{user.mention} Couldn't find a poll in this channel for /addoption. Did you forget to /startpoll first?",
         )
         assert len(interaction["data"]["options"]) == 1
@@ -181,6 +182,7 @@ class SlashCommands(commands.Cog):
     async def _handle_removeoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(
             channel,
+            current_user=user,
             response_on_fail=f"{user.mention} Couldn't find a poll in this channel for /removeoption. Did you forget to /startpoll first?",
         )
         assert len(interaction["data"]["options"]) == 1

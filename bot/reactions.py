@@ -68,7 +68,7 @@ class Reactions(commands.Cog):
         if not message.embeds:
             return
 
-        poll = Poll(message)
+        poll = Poll(message, current_user=None)
         try:
             await poll.remove_option(emoji=emoji)
         except PollException:

@@ -40,11 +40,14 @@ async def get_poll_for_context(ctx):
     if ctx.message.reference is not None:
         # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
         poll = await Poll.get_from_reply(
-            ctx.message, response_on_fail=f"{ctx.author.mention} Can't {command_str} that message, it's not a poll!"
+            ctx.message,
+            current_user=ctx.author,
+            response_on_fail=f"{ctx.author.mention} Can't {command_str} that message, it's not a poll!",
         )
     else:
         poll = await Poll.get_most_recent(
             ctx.channel,
+            current_user=ctx.author,
             response_on_fail=f"{ctx.author.mention} Couldn't find a poll in this channel for {command_str}. Did you forget to !startpoll first?",
         )
     return poll
@@ -78,7 +81,7 @@ class Commands(commands.Cog):
             return False
         return True
 
-    async def cog_after_invoke(self, ctx):
+    async def cog_before_invoke(self, ctx):
         await ctx.message.delete()
 
     async def cog_command_error(self, ctx, error):
