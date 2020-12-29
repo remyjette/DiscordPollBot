@@ -103,7 +103,7 @@ class Poll:
         embed = discord.Embed()
         embed.title = remove_mentions(settings["title"], guild=channel.guild)
         embed.add_field(name="Poll created by", value=creator.mention, inline=True)
-        embed.set_footer(text="Add new options to this poll with !addoption")
+        embed.set_footer(text="Add new options to this poll with /addoption")
 
         initial_emojis = []
         if "options" in settings:
