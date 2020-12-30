@@ -23,8 +23,6 @@ class ApplicationCommandOptionType(IntEnum):
     ROLE = 8
 
 
-_application_commands = []
-
 _startpoll_application_command = {
     "name": "startpoll",
     "description": "Start a new poll",
@@ -50,9 +48,8 @@ for i, letter in enumerate(string.ascii_lowercase[: 10 - len(_startpoll_applicat
         }
     )
 
-_application_commands.append(_startpoll_application_command)
-
-_application_commands += [
+_application_commands = [
+    _startpoll_application_command,
     {
         "name": "addoption",
         "description": "Add a new option to the latest poll (To add to a previous poll reply to that poll with !addoption)",
