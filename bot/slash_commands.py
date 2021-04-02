@@ -1,4 +1,5 @@
 import asyncio
+import discord
 import os
 import string
 from enum import IntEnum
@@ -117,24 +118,32 @@ class SlashCommands(commands.Cog):
         if interaction["type"] == 1:  # Ping
             async with aiohttp.ClientSession() as session:
                 await session.post(url, json={"type": 1})  # Type 1 is pong
+            return
         elif interaction["type"] == 2:  # ApplicationCommand
-            channel = bot.instance.get_channel(interaction["channel_id"]) or await bot.instance.fetch_channel(
-                interaction["channel_id"]
-            )
-            user = bot.instance.get_user(interaction["member"]["user"]["id"]) or await bot.instance.fetch_user(
-                interaction["member"]["user"]["id"]
-            )
-            if not channel or not user:
-                raise RuntimeError("Could not find channel or user for interaction response.")
+            try:
+                channel = bot.instance.get_channel(interaction["channel_id"]) or await bot.instance.fetch_channel(
+                    interaction["channel_id"]
+                )
+                user = bot.instance.get_user(interaction["member"]["user"]["id"]) or await bot.instance.fetch_user(
+                    interaction["member"]["user"]["id"]
+                )
+                if not channel or not user:
+                    # This shouldn't happen. If it's a permissions issue, we should get a Forbidden exception instead.
+                    raise RuntimeError("Could not find channel or user for interaction response.")
 
-            if interaction["data"]["name"] == "startpoll":
-                response_message = await self._handle_startpoll(interaction, channel, user)
-            elif interaction["data"]["name"] == "addoption":
-                response_message = await self._handle_addoption(interaction, channel, user)
-            elif interaction["data"]["name"] == "removeoption":
-                response_message = await self._handle_removeoption(interaction, channel, user)
-            else:
-                raise RuntimeError(f"Didn't understand interaction {interaction['data']['name']}.")
+                if interaction["data"]["name"] == "startpoll":
+                    response_message = await self._handle_startpoll(interaction, channel, user)
+                elif interaction["data"]["name"] == "addoption":
+                    response_message = await self._handle_addoption(interaction, channel, user)
+                elif interaction["data"]["name"] == "removeoption":
+                    response_message = await self._handle_removeoption(interaction, channel, user)
+                else:
+                    raise RuntimeError(f"Didn't understand interaction {interaction['data']['name']}.")
+            except discord.errors.Forbidden as e:
+                response_message = (
+                    "**Error:** This bot does not have permissions to form that action here. Please talk to a server"
+                    " administrator."
+                )
 
             async with aiohttp.ClientSession() as session:
                 await session.post(url, json={"type": 4, "data": {"content": response_message, "flags": 64}})
@@ -145,7 +154,7 @@ class SlashCommands(commands.Cog):
 
         if not settings["title"]:
             # This should never happen as "title" is a required arg, but just in case...
-            return "You forgot to provide the poll title!"
+            return "**Error**: You forgot to provide the poll title!"
 
         options_data = sorted(
             (o for o in interaction["data"]["options"] if o["name"].startswith("option_")), key=lambda o: o["name"]
@@ -166,12 +175,12 @@ class SlashCommands(commands.Cog):
         option = interaction["data"]["options"][0]["value"]
         if not option:
             # This should never happen as "option" is a required arg, but just in case...
-            return "You forgot to provide the poll option!"
+            return "**Error**: You forgot to provide the poll option!"
         try:
             await poll.add_option(option, reminders_enabled=False)
             return f"Thanks for adding `{option}`. Don't forget to vote for it!"
         except PollException as e:
-            return f"Error: {e}"
+            return f"**Error**: {e}"
 
     async def _handle_removeoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(
@@ -183,9 +192,9 @@ class SlashCommands(commands.Cog):
         option = interaction["data"]["options"][0]["value"]
         if not option:
             # This should never happen as "option" is a required arg, but just in case...
-            return "You forgot to provide the poll option!"
+            return "**Error**: You forgot to provide the poll option!"
         try:
             await poll.remove_option(option)
             return f"`{option}` has been removed."
         except PollException as e:
-            return f"Error: {e}"
+            return f"**Error**: {e}"
