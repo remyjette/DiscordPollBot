@@ -169,7 +169,7 @@ def _add_option_to_embed(embed, option):
     for line in description_lines:
         last_seen_emoji, last_seen_option = line.split(" ", maxsplit=1)
         if option == last_seen_option:
-            raise PollException(f"Option '{option}' already exists in this poll.")
+            raise PollException(f"Option `{option}` already exists in this poll.")
         # TODO should probably make sure the .split() above worked, that last_seen_emoji is in allowed_emoji
 
     if last_seen_emoji == EMOJI_Z:
