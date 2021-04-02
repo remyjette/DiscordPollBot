@@ -144,8 +144,7 @@ class SlashCommands(commands.Cog):
         settings["title"] = next(o for o in interaction["data"]["options"] if o["name"] == "title")["value"]
 
         if not settings["title"]:
-            # This should never happen as "title" is a required arg, but right now there's a bug in mobile Discord
-            # where it's allowing commands to be sent even when missing required args.
+            # This should never happen as "title" is a required arg, but just in case...
             return "You forgot to provide the poll title!"
 
         options_data = sorted(
@@ -166,8 +165,7 @@ class SlashCommands(commands.Cog):
         assert len(interaction["data"]["options"]) == 1
         option = interaction["data"]["options"][0]["value"]
         if not option:
-            # This should never happen as "option" is a required arg, but right now there's a bug in mobile Discord
-            # where it's allowing commands to be sent even when missing required args.
+            # This should never happen as "option" is a required arg, but just in case...
             return "You forgot to provide the poll option!"
         try:
             await poll.add_option(option, reminders_enabled=False)
@@ -184,8 +182,7 @@ class SlashCommands(commands.Cog):
         assert len(interaction["data"]["options"]) == 1
         option = interaction["data"]["options"][0]["value"]
         if not option:
-            # This should never happen as "option" is a required arg, but right now there's a bug in mobile Discord
-            # where it's allowing commands to be sent even when missing required args.
+            # This should never happen as "option" is a required arg, but just in case...
             return "You forgot to provide the poll option!"
         try:
             await poll.remove_option(option)
