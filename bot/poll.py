@@ -29,7 +29,7 @@ class Poll:
 
         return bot.instance.get_user(created_by_user_id)  # Need to make this async with a fetch backup
 
-    async def add_option(self, option):
+    async def add_option(self, option, reminders_enabled=True):
         embed = self.message.embeds[0]
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
@@ -42,6 +42,9 @@ class Poll:
                 and payload.user_id == self.current_user.id
                 and payload.emoji.name == emoji
             )
+
+        if not reminders_enabled:
+            return
 
         try:
             await bot.instance.wait_for("raw_reaction_add", timeout=30, check=check)

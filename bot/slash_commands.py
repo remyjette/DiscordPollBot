@@ -36,9 +36,9 @@ _startpoll_application_command = {
     ],
 }
 
-assert len(_startpoll_application_command["options"]) <= 10
+assert len(_startpoll_application_command["options"]) <= 25
 
-for i, letter in enumerate(string.ascii_lowercase[: 10 - len(_startpoll_application_command["options"])]):
+for i, letter in enumerate(string.ascii_lowercase[: 25 - len(_startpoll_application_command["options"])]):
     _startpoll_application_command["options"].append(
         {
             "name": f"option_{letter}",
@@ -75,8 +75,6 @@ _application_commands = [
         ],
     },
 ]
-
-assert all(len(command["description"]) <= 100 for command in _application_commands)
 
 _discord_api_base = "https://discord.com/api/v8"
 
@@ -120,11 +118,6 @@ class SlashCommands(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 await session.post(url, json={"type": 1})  # Type 1 is pong
         elif interaction["type"] == 2:  # ApplicationCommand
-            # Respond with Acknowledge. This will eat the user's imput but not send a message (as we'll send a message
-            # ourselves by calling Poll.start())
-            async with aiohttp.ClientSession() as session:
-                await session.post(url, json={"type": 2})  # Type 2 is Acknowledge
-
             channel = bot.instance.get_channel(interaction["channel_id"]) or await bot.instance.fetch_channel(
                 interaction["channel_id"]
             )
@@ -135,11 +128,16 @@ class SlashCommands(commands.Cog):
                 raise RuntimeError("Could not find channel or user for interaction response.")
 
             if interaction["data"]["name"] == "startpoll":
-                return await self._handle_startpoll(interaction, channel, user)
+                response_message = await self._handle_startpoll(interaction, channel, user)
             elif interaction["data"]["name"] == "addoption":
-                return await self._handle_addoption(interaction, channel, user)
+                response_message = await self._handle_addoption(interaction, channel, user)
             elif interaction["data"]["name"] == "removeoption":
-                return await self._handle_removeoption(interaction, channel, user)
+                response_message = await self._handle_removeoption(interaction, channel, user)
+            else:
+                raise RuntimeError(f"Didn't understand interaction {interaction['data']['name']}.")
+
+            async with aiohttp.ClientSession() as session:
+                await session.post(url, json={"type": 4, "data": {"content": response_message, "flags": 64}})
 
     async def _handle_startpoll(self, interaction, channel, user):
         settings = {}
@@ -148,8 +146,7 @@ class SlashCommands(commands.Cog):
         if not settings["title"]:
             # This should never happen as "title" is a required arg, but right now there's a bug in mobile Discord
             # where it's allowing commands to be sent even when missing required args.
-            await channel.send(f"{user.mention} You forgot to provide the poll title!", delete_after=10),
-            return
+            return "You forgot to provide the poll title!"
 
         options_data = sorted(
             (o for o in interaction["data"]["options"] if o["name"].startswith("option_")), key=lambda o: o["name"]
@@ -157,6 +154,8 @@ class SlashCommands(commands.Cog):
         settings["options"] = [o["value"] for o in options_data]
 
         await Poll.start(channel, user, settings)
+
+        return "Poll created successfully!"
 
     async def _handle_addoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(
@@ -169,12 +168,12 @@ class SlashCommands(commands.Cog):
         if not option:
             # This should never happen as "option" is a required arg, but right now there's a bug in mobile Discord
             # where it's allowing commands to be sent even when missing required args.
-            await channel.send(f"{user.mention} You forgot to provide the poll option!", delete_after=10),
-            return
+            return "You forgot to provide the poll option!"
         try:
-            return await poll.add_option(option)
+            await poll.add_option(option, reminders_enabled=False)
+            return f"Thanks for adding `{option}`. Don't forget to vote for it!"
         except PollException as e:
-            await channel.send(f"{user.mention} Error: {e}", delete_after=10)
+            return f"Error: {e}"
 
     async def _handle_removeoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(
@@ -187,9 +186,9 @@ class SlashCommands(commands.Cog):
         if not option:
             # This should never happen as "option" is a required arg, but right now there's a bug in mobile Discord
             # where it's allowing commands to be sent even when missing required args.
-            await channel.send(f"{user.mention} You forgot to provide the poll option!", delete_after=10),
-            return
+            return "You forgot to provide the poll option!"
         try:
-            return await poll.remove_option(option)
+            await poll.remove_option(option)
+            return f"`{option}` has been removed."
         except PollException as e:
-            await channel.send(f"{user.mention} Error: {e}", delete_after=10)
+            return f"Error: {e}"
