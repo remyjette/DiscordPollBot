@@ -132,7 +132,8 @@ class SlashCommands(commands.Cog):
                     raise RuntimeError("Could not find channel or user for interaction response.")
 
                 if interaction["data"]["name"] == "startpoll":
-                    response_message = await self._handle_startpoll(interaction, channel, user)
+                    await self._handle_startpoll(interaction, channel, user, url)
+                    return
                 elif interaction["data"]["name"] == "addoption":
                     response_message = await self._handle_addoption(interaction, channel, user)
                 elif interaction["data"]["name"] == "removeoption":
@@ -148,22 +149,36 @@ class SlashCommands(commands.Cog):
             async with aiohttp.ClientSession() as session:
                 await session.post(url, json={"type": 4, "data": {"content": response_message, "flags": 64}})
 
-    async def _handle_startpoll(self, interaction, channel, user):
+    async def _handle_startpoll(self, interaction, channel, user, url):
         settings = {}
         settings["title"] = next(o for o in interaction["data"]["options"] if o["name"] == "title")["value"]
 
         if not settings["title"]:
             # This should never happen as "title" is a required arg, but just in case...
-            return "**Error**: You forgot to provide the poll title!"
+            async with aiohttp.ClientSession() as session:
+                await session.post(
+                    url,
+                    json={
+                        "type": 4,
+                        "data": {"content": "**Error**: You forgot to provide the poll title!", "flags": 64},
+                    },
+                )
+                return
 
         options_data = sorted(
             (o for o in interaction["data"]["options"] if o["name"].startswith("option_")), key=lambda o: o["name"]
         )
         settings["options"] = [o["value"] for o in options_data]
 
-        await Poll.start(channel, user, settings)
+        async def post_poll_fn(embed):
+            # There doesn't appear to be a way to figure out the message ID the interaction creates, so we'll just use
+            # Poll.get_most_recent to figure it out, since we just posted the new poll.
+            async with aiohttp.ClientSession() as session:
+                await session.post(url, json={"type": 4, "data": {"embeds": [embed.to_dict()]}})
+            poll = await Poll.get_most_recent(channel, current_user=user)
+            return poll
 
-        return "Poll created successfully!"
+        await Poll.start(channel, user, settings, post_poll_fn)
 
     async def _handle_addoption(self, interaction, channel, user):
         poll = await Poll.get_most_recent(

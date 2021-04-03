@@ -1,6 +1,9 @@
+import aiohttp
 import asyncio
 import discord
 import re
+from types import SimpleNamespace
+
 import bot
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 from .utils import remove_mentions
@@ -14,20 +17,51 @@ class Poll:
     def __init__(self, poll_message, current_user):
         self.message = poll_message
         self.current_user = current_user
+        self._creator = None
 
-    @property
-    def creator(self):
+    async def get_creator(self):
+        if self._creator:
+            return self._creator
+
+        # If this poll was created with /startpoll, the creator is available by checking the Message's interaction
+        # property. If it's created with !startpoll, the creator is a field in the Poll embed.
+        # Unfortunately the discord.py Message object doesn't save the interaction property from the API object right
+        # now, so we'll have to do a separate API call to get it.
+        # Since an API call is required to check for an interaction, we check for the embed first.
+
+        created_by_user_id = None
+
         created_by_field = next(
             (field for field in self.message.embeds[0].fields if field.name == "Poll created by"), None
         )
-        if not created_by_field:
-            return None
-        try:
-            created_by_user_id = int(re.search(r"\d+", created_by_field.value).group())
-        except TypeError:
+        if created_by_field:
+            try:
+                created_by_user_id = int(re.search(r"\d+", created_by_field.value).group())
+            except TypeError:
+                pass
+
+        if not created_by_user_id:
+            route = SimpleNamespace()
+            route.url = f"https://discord.com/api/v8/channels/{self.message.channel.id}/messages/{self.message.id}"
+            route.method = "GET"
+            route.bucket = None
+            message_data = await bot.instance.http.request(route)
+            try:
+                created_by_user_id = message_data["interaction"]["user"]["id"]
+            except KeyError:
+                pass
+
+        if created_by_user_id is None:
             return None
 
-        return bot.instance.get_user(created_by_user_id)  # Need to make this async with a fetch backup
+        try:
+            self._creator = bot.instance.get_user(created_by_user_id) or await bot.instance.fetch_user(
+                created_by_user_id
+            )
+        except discord.NotFound:
+            pass
+
+        return self._creator
 
     async def add_option(self, option, reminders_enabled=True):
         embed = self.message.embeds[0]
@@ -35,16 +69,17 @@ class Poll:
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
         if not self.current_user:
             return
-        # Refresh message to see if user reacted
+
+        if not reminders_enabled:
+            return
+
+        # Wait for 30 seconds to see if the user reacted to their own option before sending a reminder
         def check(payload):
             return (
                 payload.message_id == self.message.id
                 and payload.user_id == self.current_user.id
                 and payload.emoji.name == emoji
             )
-
-        if not reminders_enabled:
-            return
 
         try:
             await bot.instance.wait_for("raw_reaction_add", timeout=30, check=check)
@@ -105,12 +140,11 @@ class Poll:
         await asyncio.gather(*tasks)
 
     @classmethod
-    async def start(cls, channel, creator, settings):
+    async def start(cls, channel, creator, settings, post_poll_fn=None):
         assert settings.get("title", None)
 
         embed = discord.Embed()
         embed.title = remove_mentions(settings["title"], guild=channel.guild)
-        embed.add_field(name="Poll created by", value=creator.mention, inline=True)
         embed.set_footer(text="Add new options to this poll with /addoption")
 
         initial_emojis = []
@@ -122,13 +156,22 @@ class Poll:
                         initial_emojis.append(emoji)
                     except PollException:
                         # During !startpoll, add_option should only fail if the user provides a duplicate or more than
-                        # 20 options. For now, just silently strip duplicates and any options past 20.
+                        # 20 options. Those can be silently skipped.
                         pass
 
-        message = await channel.send(embed=embed)
+        if post_poll_fn:
+            new_poll = await post_poll_fn(embed)
+        else:
+            embed.add_field(name="Poll created by", value=creator.mention, inline=True)
+            message = await channel.send(embed=embed)
+            new_poll = cls(message, current_user=creator)
+
+        new_poll._creator = creator
+
         if initial_emojis:
-            await asyncio.gather(*(message.add_reaction(emoji) for emoji in initial_emojis))
-        return cls(message, creator)
+            await asyncio.gather(*(new_poll.message.add_reaction(emoji) for emoji in initial_emojis))
+
+        return new_poll
 
     @classmethod
     async def get_most_recent(cls, channel, current_user, response_on_fail=None):
