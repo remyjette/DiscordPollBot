@@ -49,10 +49,15 @@ class Poll:
         try:
             await bot.instance.wait_for("raw_reaction_add", timeout=30, check=check)
         except asyncio.TimeoutError:
-            await self.message.channel.send(
-                f"{self.current_user.mention} Thanks for adding `{option}` to the poll, but don't forget to vote for it!",
-                delete_after=10,
-            )
+            try:
+                await self.current_user.send(
+                    f"Thanks for adding `{option}` to the poll at {self.message.jump_url}, but don't forget to vote for it!"
+                )
+            except discord.Forbidden:
+                await self.message.channel.send(
+                    f"{self.current_user.mention} Thanks for adding `{option}` to the poll, but don't forget to vote for it!",
+                    delete_after=30,
+                )
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
