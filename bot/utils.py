@@ -10,6 +10,13 @@ async def get_or_fetch_user(id):
         return None
 
 
+async def get_or_fetch_member(id, guild):
+    try:
+        return guild.get_member(id) or await guild.fetch_member(id)
+    except discord.NotFound:
+        return None
+
+
 async def get_or_fetch_channel(id):
     try:
         return bot.instance.get_channel(id) or await bot.instance.fetch_channel(id)
@@ -18,33 +25,34 @@ async def get_or_fetch_channel(id):
 
 
 def remove_mentions(str, guild=None):
-    def replace_id_string_with_username(id_string):
-        member = guild.get_member(int(id_string))
-        if member:
-            return f"@{member.nick}"
-        user = bot.instance.get_user(int(id_string))
-        if user:
-            return f"@{user.name}#{user.discriminator}"
-        return f"@{id_string}"
+    # NOTE: The 'members' intent is currently required for this function to work.
+    # TODO: If we don't have Intent.members, we should call fetch_user for each user mentioned and populate a dict in
+    # this function for replace_id_with_username to use instead of bot.instance.get_user.
 
-    def replace_id_string_with_role(id_string):
-        if guild and (role := guild.get_role(int(id_string))):
+    def replace_id_with_username(id):
+        user = bot.instance.get_user(id)
+        if not user:
+            return f"@{id}"
+        return f"@{user.name}#{user.discriminator}"
+
+    def replace_id_with_role(id):
+        if guild and (role := guild.get_role(id)):
             return f"@{role.name}"
         else:
-            return f"@{id_string}"
+            return f"@{id}"
 
-    def replace_id_string_with_channel(id_string):
-        channel = bot.instance.get_channel(int(id_string))
+    def replace_id_with_channel(id):
+        channel = bot.instance.get_channel(id)
         if not channel:
-            return f"#{id_string}"
+            return f"#{id}"
         return f"#{channel.name}"
 
-    def remove_mentions_replacement(matchobj):
-        if matchobj.group(1) == "@":
-            return replace_id_string_with_username(int(matchobj.group(2)))
-        if matchobj.group(1) == "@&":
-            return replace_id_string_with_role(int(matchobj.group(2)))
-        if matchobj.group(1) == "#":
-            return replace_id_string_with_channel(int(matchobj.group(2)))
+    def remove_mentions_replacement(match):
+        if match.group(1) == "@":
+            return replace_id_with_username(int(match.group(2)))
+        if match.group(1) == "@&":
+            return replace_id_with_role(int(match.group(2)))
+        if match.group(1) == "#":
+            return replace_id_with_channel(int(match.group(2)))
 
     return re.sub(r"<(@|@&|#)!?(\d+)>", remove_mentions_replacement, str)
