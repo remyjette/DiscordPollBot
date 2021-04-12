@@ -12,7 +12,7 @@ from .slash_commands import SlashCommands
 bot.instance = commands.Bot(
     command_prefix="!",
     help_command=DiscordBotHelpCommand(),
-    intents=discord.Intents(guilds=True, guild_reactions=True, messages=True),
+    intents=discord.Intents(guilds=True, guild_reactions=True, members=True, messages=True),
 )
 
 
