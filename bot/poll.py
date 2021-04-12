@@ -2,7 +2,6 @@ import aiohttp
 import asyncio
 import discord
 import re
-from types import SimpleNamespace
 
 import bot
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
@@ -41,10 +40,7 @@ class Poll:
                 pass
 
         if not created_by_user_id:
-            route = SimpleNamespace()
-            route.url = f"https://discord.com/api/v8/channels/{self.message.channel.id}/messages/{self.message.id}"
-            route.method = "GET"
-            route.bucket = None
+            route = discord.http.Route("GET", f"/channels/{self.message.channel.id}/messages/{self.message.id}")
             message_data = await bot.instance.http.request(route)
             try:
                 created_by_user_id = message_data["interaction"]["user"]["id"]
@@ -54,7 +50,7 @@ class Poll:
         if created_by_user_id is None:
             return None
 
-        self._creator = get_or_fetch_user(created_by_user_id)
+        self._creator = await get_or_fetch_user(created_by_user_id)
 
         return self._creator
 
