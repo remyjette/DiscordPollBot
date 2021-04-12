@@ -9,6 +9,7 @@ from discord.ext import commands
 
 import bot
 from .poll import Poll, PollException
+from .utils import get_or_fetch_channel, get_or_fetch_user
 
 
 class ApplicationCommandOptionType(IntEnum):
@@ -121,12 +122,8 @@ class SlashCommands(commands.Cog):
             return
         elif interaction["type"] == 2:  # ApplicationCommand
             try:
-                channel = bot.instance.get_channel(interaction["channel_id"]) or await bot.instance.fetch_channel(
-                    interaction["channel_id"]
-                )
-                user = bot.instance.get_user(interaction["member"]["user"]["id"]) or await bot.instance.fetch_user(
-                    interaction["member"]["user"]["id"]
-                )
+                channel = await get_or_fetch_channel(interaction["channel_id"])
+                user = await get_or_fetch_user(interaction["member"]["user"]["id"])
                 if not channel or not user:
                     # This shouldn't happen. If it's a permissions issue, we should get a Forbidden exception instead.
                     raise RuntimeError("Could not find channel or user for interaction response.")

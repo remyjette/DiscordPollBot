@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import bot
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
-from .utils import remove_mentions
+from .utils import get_or_fetch_user, remove_mentions
 
 
 class PollException(Exception):
@@ -54,12 +54,7 @@ class Poll:
         if created_by_user_id is None:
             return None
 
-        try:
-            self._creator = bot.instance.get_user(created_by_user_id) or await bot.instance.fetch_user(
-                created_by_user_id
-            )
-        except discord.NotFound:
-            pass
+        self._creator = get_or_fetch_user(created_by_user_id)
 
         return self._creator
 

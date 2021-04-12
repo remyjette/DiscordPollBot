@@ -1,5 +1,20 @@
+import discord
 import re
 import bot
+
+
+async def get_or_fetch_user(id):
+    try:
+        return bot.instance.get_user(id) or await bot.instance.fetch_user(id)
+    except discord.NotFound:
+        return None
+
+
+async def get_or_fetch_channel(id):
+    try:
+        return bot.instance.get_channel(id) or await bot.instance.fetch_channel(id)
+    except discord.NotFound:
+        return None
 
 
 def remove_mentions(str, guild=None):
