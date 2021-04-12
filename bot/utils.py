@@ -19,10 +19,13 @@ async def get_or_fetch_channel(id):
 
 def remove_mentions(str, guild=None):
     def replace_id_string_with_username(id_string):
+        member = guild.get_member(int(id_string))
+        if member:
+            return f"@{member.nick}"
         user = bot.instance.get_user(int(id_string))
-        if not user:
-            return f"@{id_string}"
-        return f"@{user.name}#{user.discriminator}"
+        if user:
+            return f"@{user.name}#{user.discriminator}"
+        return f"@{id_string}"
 
     def replace_id_string_with_role(id_string):
         if guild and (role := guild.get_role(int(id_string))):
