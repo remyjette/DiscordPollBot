@@ -93,9 +93,11 @@ class SlashCommands(commands.Cog):
     @commands.Cog.listener()
     async def on_ready(self):
         url = f"{_discord_api_base}/applications/{bot.instance.user.id}"
-        # If this is PollBotDev, use the guild-specific endpoint for the test server which will update instantly.
-        # Otherwise use the global endpoint. Should probably clean this up.
-        url += "/commands" if bot.instance.user.id != 777347007664750592 else f"/guilds/714999738318979163/commands"
+        # Global commands are cached for up to an hour, and have a rate limit of 200 application command creates per
+        # day. For testing, Discord recommends using Guild commands instead which update instantly and don't have the
+        # same rate limit. So, detect if this is the dev account and if so create the commands as Guild commands on
+        # the test server instead.
+        url += "/commands" if bot.instance.user.id != 777347007664750592 else "/guilds/714999738318979163/commands"
         async with aiohttp.ClientSession() as session:
             await asyncio.gather(
                 *(
