@@ -99,7 +99,22 @@ class SlashCommands(commands.Cog):
         # the test server instead.
         url += "/commands" if bot.instance.user.id != 777347007664750592 else "/guilds/714999738318979163/commands"
         async with aiohttp.ClientSession() as session:
+            command_names = [command["name"] for command in _application_commands]
+            existing_commands_response = await session.get(
+                url, headers={"Authorization": f"Bot {bot.instance.http.token}"}, raise_for_status=True
+            )
+            existing_commands_data = await existing_commands_response.json()
+
             await asyncio.gather(
+                *(
+                    session.delete(
+                        f"{url}/{command['id']}",
+                        headers={"Authorization": f"Bot {bot.instance.http.token}"},
+                        raise_for_status=True,
+                    )
+                    for command in existing_commands_data
+                    if command["name"] not in command_names
+                ),
                 *(
                     session.post(
                         url,
@@ -108,7 +123,7 @@ class SlashCommands(commands.Cog):
                         raise_for_status=True,
                     )
                     for command in _application_commands
-                )
+                ),
             )
 
     @commands.Cog.listener()
