@@ -3,6 +3,18 @@ import re
 import bot
 
 
+class DiscordV8Route(discord.http.Route):
+    """A subclass of discord.http.Route that uses the v8 gateway as the base instead.
+
+    discord.http.Route currently uses v8 in the master branch, so assuming that releases and doesn't get reverted this
+    can be removed on the next release.
+
+    https://github.com/Rapptz/discord.py/commit/d85805ab6d7a077db303c2bf1670c4948455f3ab
+    """
+
+    BASE = "https://discord.com/api/v8"
+
+
 async def get_or_fetch_user(id):
     try:
         return bot.instance.get_user(id) or await bot.instance.fetch_user(id)

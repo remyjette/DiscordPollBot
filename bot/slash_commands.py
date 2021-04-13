@@ -4,12 +4,11 @@ import os
 import string
 from enum import IntEnum
 
-import aiohttp
 from discord.ext import commands
 
 import bot
 from .poll import Poll, PollException
-from .utils import get_or_fetch_channel, get_or_fetch_user
+from .utils import DiscordV8Route, get_or_fetch_channel, get_or_fetch_user
 
 
 class ApplicationCommandOptionType(IntEnum):
@@ -78,8 +77,6 @@ _application_commands = [
     },
 ]
 
-_discord_api_base = "https://discord.com/api/v8"
-
 
 class SlashCommands(commands.Cog):
     """A discord.ext.commands.Cog that will listen to events to handle Slash Commands
@@ -92,39 +89,30 @@ class SlashCommands(commands.Cog):
 
     @commands.Cog.listener()
     async def on_ready(self):
-        url = f"{_discord_api_base}/applications/{bot.instance.user.id}"
+        url = f"/applications/{bot.instance.user.id}"
         # Global commands are cached for up to an hour, and have a rate limit of 200 application command creates per
         # day. For testing, Discord recommends using Guild commands instead which update instantly and don't have the
         # same rate limit. So, detect if this is the dev account and if so create the commands as Guild commands on
         # the test server instead.
         url += "/commands" if bot.instance.user.id != 777347007664750592 else "/guilds/714999738318979163/commands"
-        async with aiohttp.ClientSession() as session:
-            command_names = [command["name"] for command in _application_commands]
-            existing_commands_response = await session.get(
-                url, headers={"Authorization": f"Bot {bot.instance.http.token}"}, raise_for_status=True
-            )
-            existing_commands_data = await existing_commands_response.json()
 
-            await asyncio.gather(
-                *(
-                    session.delete(
-                        f"{url}/{command['id']}",
-                        headers={"Authorization": f"Bot {bot.instance.http.token}"},
-                        raise_for_status=True,
-                    )
-                    for command in existing_commands_data
-                    if command["name"] not in command_names
-                ),
-                *(
-                    session.post(
-                        url,
-                        headers={"Authorization": f"Bot {bot.instance.http.token}"},
-                        json=command,
-                        raise_for_status=True,
-                    )
-                    for command in _application_commands
-                ),
-            )
+        # Before posting changes to our currently registered app commands, retrieve the current list so that we can
+        # delete any that might have been added by a previous version of this bot that are no longer in use.
+        existing_commands_data = await bot.instance.http.request(DiscordV8Route("GET", url))
+
+        command_names = [command["name"] for command in _application_commands]
+
+        await asyncio.gather(
+            *(
+                bot.instance.http.request(DiscordV8Route("DELETE", f"{url}/{command['id']}"))
+                for command in existing_commands_data
+                if command["name"] not in command_names
+            ),
+            *(
+                bot.instance.http.request(DiscordV8Route("POST", url), json=command)
+                for command in _application_commands
+            ),
+        )
 
     @commands.Cog.listener()
     async def on_socket_response(self, msg):
@@ -132,10 +120,9 @@ class SlashCommands(commands.Cog):
             return
         interaction = msg["d"]
 
-        url = f"{_discord_api_base}/interactions/{interaction['id']}/{interaction['token']}/callback"
+        url = f"/interactions/{interaction['id']}/{interaction['token']}/callback"
         if interaction["type"] == 1:  # Ping
-            async with aiohttp.ClientSession() as session:
-                await session.post(url, json={"type": 1})  # Type 1 is pong
+            await bot.instance.http.request(DiscordV8Route("POST", url), json={"type": 1})  # Type 1 is pong
             return
         elif interaction["type"] == 2:  # ApplicationCommand
             try:
@@ -160,8 +147,7 @@ class SlashCommands(commands.Cog):
                     " administrator."
                 )
 
-            async with aiohttp.ClientSession() as session:
-                await session.post(url, json={"type": 4, "data": {"content": response_message, "flags": 64}})
+            await self._post_slash_command_reponse(url, response_message, ephemeral=True)
 
     async def _handle_startpoll(self, interaction, channel, user, url):
         settings = {}
@@ -169,15 +155,10 @@ class SlashCommands(commands.Cog):
 
         if not settings["title"]:
             # This should never happen as "title" is a required arg, but just in case...
-            async with aiohttp.ClientSession() as session:
-                await session.post(
-                    url,
-                    json={
-                        "type": 4,
-                        "data": {"content": "**Error**: You forgot to provide the poll title!", "flags": 64},
-                    },
-                )
-                return
+            await self._post_slash_command_reponse(
+                url, "**Error**: You forgot to provide the poll title!", ephemeral=True
+            )
+            return
 
         options_data = sorted(
             (o for o in interaction["data"]["options"] if o["name"].startswith("option_")), key=lambda o: o["name"]
@@ -185,10 +166,9 @@ class SlashCommands(commands.Cog):
         settings["options"] = [o["value"] for o in options_data]
 
         async def post_poll_fn(embed):
+            await self._post_slash_command_reponse(url, embed, ephemeral=False)
             # There doesn't appear to be a way to figure out the message ID the interaction creates, so we'll just use
             # Poll.get_most_recent to figure it out, since we just posted the new poll.
-            async with aiohttp.ClientSession() as session:
-                await session.post(url, json={"type": 4, "data": {"embeds": [embed.to_dict()]}})
             poll = await Poll.get_most_recent(channel, current_user=user)
             return poll
 
@@ -227,3 +207,16 @@ class SlashCommands(commands.Cog):
             return f"`{option}` has been removed."
         except PollException as e:
             return f"**Error**: {e}"
+
+    async def _post_slash_command_reponse(self, url, message, ephemeral=True):
+        data = {"type": 4, "data": {}}
+
+        if isinstance(message, discord.Embed):
+            data["data"]["embeds"] = [message.to_dict()]
+        else:
+            data["data"]["content"] = message
+
+        if ephemeral:
+            data["data"]["flags"] = 64
+
+        await bot.instance.http.request(DiscordV8Route("POST", url), json=data)
