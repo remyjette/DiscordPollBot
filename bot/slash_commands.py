@@ -141,9 +141,9 @@ class SlashCommands(commands.Cog):
                     response_message = await self._handle_removeoption(interaction, channel, user)
                 else:
                     raise RuntimeError(f"Didn't understand interaction {interaction['data']['name']}.")
-            except discord.errors.Forbidden as e:
+            except discord.Forbidden as e:
                 response_message = (
-                    "**Error:** This bot does not have permissions to form that action here. Please talk to a server"
+                    "**Error:** This bot does not have permissions to perform that action here. Please talk to a server"
                     " administrator."
                 )
 
