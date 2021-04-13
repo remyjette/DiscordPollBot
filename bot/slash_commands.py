@@ -167,10 +167,14 @@ class SlashCommands(commands.Cog):
 
         async def post_poll_fn(embed):
             await self._post_slash_command_reponse(url, embed, ephemeral=False)
-            # There doesn't appear to be a way to figure out the message ID the interaction creates, so we'll just use
-            # Poll.get_most_recent to figure it out, since we just posted the new poll.
-            poll = await Poll.get_most_recent(channel, current_user=user)
-            return poll
+            # The ineraction.id is different from the message that appears in the channel, and the POST to update it
+            # returns a 204 No Content. To get the message ID, send a GET request to the @original endpoint for this
+            # interaction.
+            webhook_message_data = await bot.instance.http.request(
+                DiscordV8Route("GET", f"/webhooks/{bot.instance.user.id}/{interaction['token']}/messages/@original")
+            )
+            message = await channel.fetch_message(webhook_message_data["id"])
+            return Poll(message, user)
 
         await Poll.start(channel, user, settings, post_poll_fn)
 
