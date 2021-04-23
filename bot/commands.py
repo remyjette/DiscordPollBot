@@ -160,7 +160,6 @@ class Commands(commands.Cog):
         help=f"Removes an option to an existing poll.\n\nYou can specify either the letter/number for the option, use the emoji, or just name the text of the option.\n\nExamples:\n!removeoption 3\n!removeoption a\n!removeoption C\n!removeoption :four:\n!removeoption I mispelld this",
         usage="<existing option>",
     )
-    @commands.check_any(commands.is_owner(), is_admin_check())
     async def removeoption(self, ctx, *, arg):
         if not (poll := await get_poll_for_context(ctx)):
             return

@@ -4,7 +4,7 @@ import re
 
 import bot
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
-from .utils import get_or_fetch_user, remove_mentions
+from .utils import get_or_fetch_member, remove_mentions, user_to_member
 
 
 class PollException(Exception):
@@ -16,6 +16,9 @@ class Poll:
         self.message = poll_message
         self.current_user = current_user
         self._creator = None
+
+    async def ensure_current_user_is_member(self):
+        self.current_user = await user_to_member(self.current_user, self.message.guild)
 
     async def get_creator(self):
         if self._creator:
@@ -49,7 +52,7 @@ class Poll:
         if created_by_user_id is None:
             return None
 
-        self._creator = await get_or_fetch_user(created_by_user_id)
+        self._creator = await get_or_fetch_member(created_by_user_id, self.message.guild)
 
         return self._creator
 
@@ -86,6 +89,17 @@ class Poll:
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
+
+        await self.ensure_current_user_is_member()
+
+        if not (
+            self.current_user == await self.get_creator()
+            or self.current_user.permissions_in(self.message.channel).manage_messages
+            or self.current_user == (await bot.instance.application_info()).owner
+        ):
+            raise PollException(
+                "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
+            )
 
         if not emoji and len(option) == 1:
             if option in allowed_emoji:
@@ -156,7 +170,7 @@ class Poll:
             message = await channel.send(embed=embed)
             new_poll = cls(message, current_user=creator)
 
-        new_poll._creator = creator
+        new_poll._creator = await user_to_member(creator, new_poll.message.guild)
 
         if initial_emojis:
             await asyncio.gather(*(new_poll.message.add_reaction(emoji) for emoji in initial_emojis))

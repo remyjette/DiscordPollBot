@@ -8,7 +8,7 @@ from discord.ext import commands
 
 import bot
 from .poll import Poll, PollException
-from .utils import DiscordV8Route, get_or_fetch_channel, get_or_fetch_user
+from .utils import DiscordV8Route, get_or_fetch_channel, get_or_fetch_member
 
 
 class ApplicationCommandOptionType(IntEnum):
@@ -65,11 +65,11 @@ _application_commands = [
     },
     {
         "name": "removeoption",
-        "description": "(Admin only) Remove option from latest poll (To remove from previous poll reply with !removeoption)",
+        "description": "Remove an option from latest poll (To remove from a previous poll reply with !removeoption).",
         "options": [
             {
                 "name": "option_name",
-                "description": "The new option",
+                "description": "The option to remove. Accepts the option letter or the option text.",
                 "type": ApplicationCommandOptionType.STRING,
                 "required": True,
             }
@@ -127,7 +127,7 @@ class SlashCommands(commands.Cog):
         elif interaction["type"] == 2:  # ApplicationCommand
             try:
                 channel = await get_or_fetch_channel(interaction["channel_id"])
-                user = await get_or_fetch_user(interaction["member"]["user"]["id"])
+                user = await get_or_fetch_member(interaction["member"]["user"]["id"], channel.guild)
                 if not channel or not user:
                     # This shouldn't happen. If it's a permissions issue, we should get a Forbidden exception instead.
                     raise RuntimeError("Could not find channel or user for interaction response.")
