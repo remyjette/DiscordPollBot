@@ -36,6 +36,12 @@ async def get_or_fetch_channel(id):
         return None
 
 
+async def user_to_member(user, guild):
+    if isinstance(user, discord.Member):
+        return user
+    return await get_or_fetch_member(user.id)
+
+
 def remove_mentions(str, guild=None):
     # NOTE: The 'members' intent is currently required for this function to work.
     # TODO: If we don't have Intent.members, we should call fetch_user for each user mentioned and populate a dict in
