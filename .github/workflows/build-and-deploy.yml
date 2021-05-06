@@ -8,6 +8,7 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
+    if: github.actor == github.event.repository.owner.login
     steps:
     - name: 'Checkout repo'
       uses: actions/checkout@master
@@ -19,8 +20,8 @@ jobs:
       uses: docker/login-action@v1
       with:
         registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.CR_PAT }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build and push to GitHub Container Registry
       uses: docker/build-push-action@v2
@@ -28,8 +29,8 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        cache-from: type=registry,ref=ghcr.io/${{ github.repository_owner }}/discord-poll-bot:latest
+        cache-from: type=registry,ref=ghcr.io/${{ github.actor }}/discord-poll-bot:latest
         cache-to: type=inline
         tags: |
-          ghcr.io/${{ github.repository_owner }}/discord-poll-bot:latest
-          ghcr.io/${{ github.repository_owner }}/discord-poll-bot:${{ github.sha }}
+          ghcr.io/${{ github.actor }}/discord-poll-bot:latest
+          ghcr.io/${{ github.actor }}/discord-poll-bot:${{ github.sha }}
