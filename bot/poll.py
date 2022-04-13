@@ -120,12 +120,11 @@ class Poll:
         await asyncio.gather(*tasks)
 
     @classmethod
-    async def start(cls, title: str, interaction: discord.Interaction):
+    def create_poll_embed(cls, title: str):
         embed = discord.Embed()
-        embed.title = remove_mentions(title, client=interaction.client, guild=interaction.guild)
+        embed.title = title
         embed.set_footer(text="Add new options to this poll with /addoption")
-
-        await interaction.response.send_message(embed=embed)
+        return embed
 
     @classmethod
     async def get_most_recent(
