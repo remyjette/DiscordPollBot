@@ -29,7 +29,7 @@ import re
     #     return await self.get_or_fetch_member(user.id)
 
 
-def remove_mentions(self, str, *, client: discord.Client, guild=None):
+def remove_mentions(str, *, client: discord.Client, guild=None):
     # NOTE: The 'members' intent is currently required for this function to work.
     # TODO: If we don't have Intent.members, we should call fetch_user for each user mentioned and populate a dict in
     # this function for replace_id_with_username to use instead of self.get_user.

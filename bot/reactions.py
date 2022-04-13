@@ -1,16 +1,12 @@
 import asyncio
 import discord
-import sys
-from discord.ext import commands
 
-import bot
 from .emoji import allowed_emoji
-from .poll import Poll, PollException
 
 
-def listen_for_reactions(client: discord.Client):
+def setup_reaction_listeners(client: discord.Client):
     @client.event
-    async def on_raw_reaction_add(self, payload):
+    async def on_raw_reaction_add(payload):
         await client.wait_until_ready()
 
         if payload.user_id == client.user.id:
@@ -24,8 +20,8 @@ def listen_for_reactions(client: discord.Client):
             if not reaction.me:
                 await message.clear_reaction(reaction.emoji)
 
-    @client.event()
-    async def on_raw_reaction_remove(self, payload):
+    @client.event
+    async def on_raw_reaction_remove(payload):
         await client.wait_until_ready()
 
         channel = client.get_channel(payload.channel_id)
@@ -43,8 +39,8 @@ def listen_for_reactions(client: discord.Client):
             # use /removeoption instead.
             await message.add_reaction(emoji)
 
-    @client.event()
-    async def on_raw_reaction_clear(self, payload):
+    @client.event
+    async def on_raw_reaction_clear(payload):
         await client.wait_until_ready()
 
         channel = client.get_channel(payload.channel_id)

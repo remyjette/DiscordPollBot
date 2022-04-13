@@ -6,13 +6,12 @@ from .utils import remove_mentions
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 
 
-class PollException(Exception):
+class PollException(discord.app_commands.AppCommandError):
     pass
 
 
 class Poll:
-    def __init__(self, client: discord.Client, poll_message, current_user):
-        self.client = client
+    def __init__(self, poll_message, current_user):
         self.message = poll_message
         self.current_user = current_user
         #self._creator = None
@@ -56,36 +55,13 @@ class Poll:
 
     #     return self._creator
 
-    async def add_option(self, option, reminders_enabled=True):
+    async def add_option(self, option):
         embed = self.message.embeds[0]
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
         if not self.current_user:
             return
 
-        if not reminders_enabled:
-            return
-
-        # Wait for 30 seconds to see if the user reacted to their own option before sending a reminder
-        def check(payload):
-            return (
-                payload.message_id == self.message.id
-                and payload.user_id == self.current_user.id
-                and payload.emoji.name == emoji
-            )
-
-        try:
-            await self.client.wait_for("raw_reaction_add", timeout=30, check=check)
-        except asyncio.TimeoutError:
-            try:
-                await self.current_user.send(
-                    f"Thanks for adding `{option}` to the poll at {self.message.jump_url}, but don't forget to vote for it!"
-                )
-            except discord.Forbidden:
-                await self.message.channel.send(
-                    f"{self.current_user.mention} Thanks for adding `{option}` to the poll, but don't forget to vote for it!",
-                    delete_after=30,
-                )
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
@@ -97,6 +73,7 @@ class Poll:
             or self.current_user.permissions_in(self.message.channel).manage_messages
             or self.current_user == (await self.client.application_info()).owner
         ):
+            # TODO move this to app_commands.py
             raise PollException(
                 "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
             )
@@ -144,47 +121,19 @@ class Poll:
         await asyncio.gather(*tasks)
 
     @classmethod
-    async def start(cls, channel, creator, settings, post_poll_fn=None):
-        assert settings.get("title", None)
-
+    async def start(cls, title: str, interaction: discord.Interaction):
         embed = discord.Embed()
-        embed.title = remove_mentions(settings["title"], guild=channel.guild)
+        embed.title = remove_mentions(title, client=interaction.client, guild=interaction.guild)
         embed.set_footer(text="Add new options to this poll with /addoption")
 
-        initial_emojis = []
-        if "options" in settings:
-            for option in settings["options"]:
-                if option:
-                    try:
-                        emoji = _add_option_to_embed(embed, option)
-                        initial_emojis.append(emoji)
-                    except PollException:
-                        # During !startpoll, add_option should only fail if the user provides a duplicate or more than
-                        # 20 options. Those can be silently skipped.
-                        pass
-
-        if post_poll_fn:
-            new_poll = await post_poll_fn(embed)
-        else:
-            embed.add_field(name="Poll created by", value=creator.mention, inline=True)
-            message = await channel.send(embed=embed)
-            new_poll = cls(message, current_user=creator)
-
-        #new_poll._creator = await client.user_to_member(creator, new_poll.message.guild)
-
-        if initial_emojis:
-            await asyncio.gather(*(new_poll.message.add_reaction(emoji) for emoji in initial_emojis))
-
-        return new_poll
+        await interaction.response.send_message(embed=embed)
 
     @classmethod
-    async def get_most_recent(cls, client: discord.Client, channel, current_user, response_on_fail=None):
-        message = await channel.history().find(lambda m: m.author == client.user and len(m.embeds) > 0)
-        if message is None:
-            if response_on_fail:
-                await channel.send(response_on_fail, delete_after=10)
-            return None
-        return cls(message, current_user)
+    async def get_most_recent(cls, client: discord.Client, channel: discord.abc.GuildChannel | discord.PartialMessageable | discord.Thread | None, current_user):
+        async for message in channel.history():
+            if message.author == client.user and len(message.embeds) > 0:
+                return cls(message, current_user)
+        raise PollException(f"No poll was found in the channel #{channel.name}.")
 
     # @classmethod
     # async def get_from_reply(cls, client: discord.Client, message, current_user, response_on_fail=None):
@@ -205,7 +154,7 @@ def _add_option_to_embed(embed, option):
             "Poll options should not contain added/edited information metadata as it will be added by the bot."
         )
 
-    if embed.description == discord.Embed.Empty:
+    if embed.description == None:
         new_option_emoji = EMOJI_A
         embed.description = new_option_emoji + " " + option
         return new_option_emoji
