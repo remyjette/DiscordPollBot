@@ -5,18 +5,17 @@ import discord
 import os
 from discord.ext import commands
 
-from .commands import Commands, DiscordBotHelpCommand
-from .reactions import Reactions
-from .slash_commands import SlashCommands
+from .reactions import listen_for_reactions
+#from .slash_commands import SlashCommands
 
-bot.instance = commands.Bot(
+client = discord.Client(
     command_prefix="!",
-    help_command=DiscordBotHelpCommand(),
+    help_command=None,
     intents=discord.Intents(guilds=True, guild_reactions=True, members=True, messages=True),
 )
 
 
-@bot.instance.event
+@client.event
 async def on_ready():
     print("Ready")
 
@@ -25,7 +24,6 @@ try:
     token = os.environ["DISCORD_TOKEN"]
 except KeyError:
     raise SystemExit("You need to specify the environment variable DISCORD_TOKEN before running the bot!")
-bot.instance.add_cog(Commands())
-bot.instance.add_cog(Reactions())
-bot.instance.add_cog(SlashCommands())
-bot.instance.run(token)
+listen_for_reactions(client)
+# client.add_cog(SlashCommands())
+client.run(token)

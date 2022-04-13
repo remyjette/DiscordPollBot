@@ -8,29 +8,29 @@ from .emoji import allowed_emoji
 from .poll import Poll, PollException
 
 
-class Reactions(commands.Cog):
-    @commands.Cog.listener()
+def listen_for_reactions(client: discord.Client):
+    @client.event
     async def on_raw_reaction_add(self, payload):
-        await bot.instance.wait_until_ready()
+        await client.wait_until_ready()
 
-        if payload.user_id == bot.instance.user.id:
+        if payload.user_id == client.user.id:
             return
-        channel = bot.instance.get_channel(payload.channel_id)
+        channel = client.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != bot.instance.user:
+        if message.author != client.user:
             return
 
         for reaction in message.reactions:
             if not reaction.me:
                 await message.clear_reaction(reaction.emoji)
 
-    @commands.Cog.listener()
+    @client.event()
     async def on_raw_reaction_remove(self, payload):
-        await bot.instance.wait_until_ready()
+        await client.wait_until_ready()
 
-        channel = bot.instance.get_channel(payload.channel_id)
+        channel = client.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != bot.instance.user:
+        if message.author != client.user:
             return
         emoji = payload.emoji.name
         reaction = discord.utils.find(lambda r: r.emoji == emoji, message.reactions)
@@ -38,18 +38,18 @@ class Reactions(commands.Cog):
         if not message.embeds:
             return
 
-        elif payload.user_id == bot.instance.user.id:
+        elif payload.user_id == client.user.id:
             # Someone with the 'Manage Messages' permissions removed our reaction. Add our reaction back, they should
             # use /removeoption instead.
             await message.add_reaction(emoji)
 
-    @commands.Cog.listener()
+    @client.event()
     async def on_raw_reaction_clear(self, payload):
-        await bot.instance.wait_until_ready()
+        await client.wait_until_ready()
 
-        channel = bot.instance.get_channel(payload.channel_id)
+        channel = client.get_channel(payload.channel_id)
         message = await channel.fetch_message(payload.message_id)
-        if message.author != bot.instance.user:
+        if message.author != client.user:
             return
         elif not message.embeds:
             return

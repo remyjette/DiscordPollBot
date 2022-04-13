@@ -2,9 +2,8 @@ import asyncio
 import discord
 import re
 
-import bot
+from .utils import remove_mentions
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
-from .utils import get_or_fetch_member, remove_mentions, user_to_member
 
 
 class PollException(Exception):
@@ -12,49 +11,50 @@ class PollException(Exception):
 
 
 class Poll:
-    def __init__(self, poll_message, current_user):
+    def __init__(self, client: discord.Client, poll_message, current_user):
+        self.client = client
         self.message = poll_message
         self.current_user = current_user
-        self._creator = None
+        #self._creator = None
 
-    async def ensure_current_user_is_member(self):
-        self.current_user = await user_to_member(self.current_user, self.message.guild)
+    # async def ensure_current_user_is_member(self):
+    #     self.current_user = await self.client.user_to_member(self.current_user, self.message.guild)
 
-    async def get_creator(self):
-        if self._creator:
-            return self._creator
+    # async def get_creator(self):
+    #     if self._creator:
+    #         return self._creator
 
-        # If this poll was created with /startpoll, the creator is available by checking the Message's interaction
-        # property. If it's created with !startpoll, the creator is a field in the Poll embed.
-        # Unfortunately the discord.py Message object doesn't save the interaction property from the API object right
-        # now, so we'll have to do a separate API call to get it.
-        # Since an API call is required to check for an interaction, we check for the embed first.
+    #     # If this poll was created with /startpoll, the creator is available by checking the Message's interaction
+    #     # property. If it's created with !startpoll, the creator is a field in the Poll embed.
+    #     # Unfortunately the discord.py Message object doesn't save the interaction property from the API object right
+    #     # now, so we'll have to do a separate API call to get it.
+    #     # Since an API call is required to check for an interaction, we check for the embed first.
 
-        created_by_user_id = None
+    #     created_by_user_id = None
 
-        created_by_field = next(
-            (field for field in self.message.embeds[0].fields if field.name == "Poll created by"), None
-        )
-        if created_by_field:
-            try:
-                created_by_user_id = int(re.search(r"\d+", created_by_field.value).group())
-            except TypeError:
-                pass
+    #     # created_by_field = next(
+    #     #     (field for field in self.message.embeds[0].fields if field.name == "Poll created by"), None
+    #     # )
+    #     # if created_by_field:
+    #     #     try:
+    #     #         created_by_user_id = int(re.search(r"\d+", created_by_field.value).group())
+    #     #     except TypeError:
+    #     #         pass
 
-        if not created_by_user_id:
-            route = discord.http.Route("GET", f"/channels/{self.message.channel.id}/messages/{self.message.id}")
-            message_data = await bot.instance.http.request(route)
-            try:
-                created_by_user_id = message_data["interaction"]["user"]["id"]
-            except KeyError:
-                pass
+    #     # if not created_by_user_id:
+    #     #     route = discord.http.Route("GET", f"/channels/{self.message.channel.id}/messages/{self.message.id}")
+    #     #     message_data = await bot.instance.http.request(route)
+    #     #     try:
+    #     #         created_by_user_id = message_data["interaction"]["user"]["id"]
+    #     #     except KeyError:
+    #     #         pass
 
-        if created_by_user_id is None:
-            return None
+    #     if created_by_user_id is None:
+    #         return None
 
-        self._creator = await get_or_fetch_member(created_by_user_id, self.message.guild)
+    #     #self._creator = await self.client.get_or_fetch_member(created_by_user_id, self.message.guild)
 
-        return self._creator
+    #     return self._creator
 
     async def add_option(self, option, reminders_enabled=True):
         embed = self.message.embeds[0]
@@ -75,7 +75,7 @@ class Poll:
             )
 
         try:
-            await bot.instance.wait_for("raw_reaction_add", timeout=30, check=check)
+            await self.client.wait_for("raw_reaction_add", timeout=30, check=check)
         except asyncio.TimeoutError:
             try:
                 await self.current_user.send(
@@ -95,7 +95,7 @@ class Poll:
         if not (
             self.current_user == await self.get_creator()
             or self.current_user.permissions_in(self.message.channel).manage_messages
-            or self.current_user == (await bot.instance.application_info()).owner
+            or self.current_user == (await self.client.application_info()).owner
         ):
             raise PollException(
                 "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
@@ -170,7 +170,7 @@ class Poll:
             message = await channel.send(embed=embed)
             new_poll = cls(message, current_user=creator)
 
-        new_poll._creator = await user_to_member(creator, new_poll.message.guild)
+        #new_poll._creator = await client.user_to_member(creator, new_poll.message.guild)
 
         if initial_emojis:
             await asyncio.gather(*(new_poll.message.add_reaction(emoji) for emoji in initial_emojis))
@@ -178,25 +178,25 @@ class Poll:
         return new_poll
 
     @classmethod
-    async def get_most_recent(cls, channel, current_user, response_on_fail=None):
-        message = await channel.history().find(lambda m: m.author == bot.instance.user and len(m.embeds) > 0)
+    async def get_most_recent(cls, client: discord.Client, channel, current_user, response_on_fail=None):
+        message = await channel.history().find(lambda m: m.author == client.user and len(m.embeds) > 0)
         if message is None:
             if response_on_fail:
                 await channel.send(response_on_fail, delete_after=10)
             return None
         return cls(message, current_user)
 
-    @classmethod
-    async def get_from_reply(cls, message, current_user, response_on_fail=None):
-        if message.reference is None:
-            raise RuntimeError("get_from_reply() was called on a message that didn't have a reply")
-        # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
-        replied_to_message = await message.channel.fetch_message(message.reference.message_id)
-        if replied_to_message.author != bot.instance.user or not replied_to_message.embeds:
-            if response_on_fail:
-                await message.channel.send(response_on_fail, delete_after=10)
-            return None
-        return cls(replied_to_message, current_user)
+    # @classmethod
+    # async def get_from_reply(cls, client: discord.Client, message, current_user, response_on_fail=None):
+    #     if message.reference is None:
+    #         raise RuntimeError("get_from_reply() was called on a message that didn't have a reply")
+    #     # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
+    #     replied_to_message = await message.channel.fetch_message(message.reference.message_id)
+    #     if replied_to_message.author != client.user or not replied_to_message.embeds:
+    #         if response_on_fail:
+    #             await message.channel.send(response_on_fail, delete_after=10)
+    #         return None
+    #     return cls(replied_to_message, current_user)
 
 
 def _add_option_to_embed(embed, option):

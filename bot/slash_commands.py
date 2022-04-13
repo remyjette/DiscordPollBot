@@ -8,7 +8,6 @@ from discord.ext import commands
 
 import bot
 from .poll import Poll, PollException
-from .utils import DiscordV8Route, get_or_fetch_channel, get_or_fetch_member
 
 
 class ApplicationCommandOptionType(IntEnum):
