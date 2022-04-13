@@ -6,12 +6,12 @@ from typing import Optional, Union
 import bot
 from .poll import Poll, PollException
 
-def setup_app_commands(client):
+def setup_app_commands(client: discord.Client):
     tree = app_commands.CommandTree(client)
 
     @client.event
     async def on_ready():
-        await tree.sync(guild=bot.TEST_GUILD if client.user == bot.TEST_USER else None)
+        await tree.sync(guild=bot.TEST_GUILD if client.user.id == bot.TEST_USER.id else None)
         print("App commands synced.", flush=True)
 
     @tree.command(name="startpoll", description="Start a new poll")
@@ -36,7 +36,7 @@ def setup_app_commands(client):
 
     @tree.command(name="removeoption", description="Remove an option from latest poll")
     async def remove_option(interaction: discord.Interaction):
-        await interaction.response.send_message("Rwmove option not implemented")
+        await interaction.response.send_message("Rwmove option not implemented", ephemeral=True)
 
     @tree.error
     async def on_error(interaction: discord.Interaction, command: Optional[Union[app_commands.Command, app_commands.ContextMenu]], error: app_commands.AppCommandError):
