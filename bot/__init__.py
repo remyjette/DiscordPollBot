@@ -1,4 +1,5 @@
 import discord
+
 TEST_GUILD = discord.Object(714999738318979163)
 TEST_USER = discord.Object(777347007664750592)
 

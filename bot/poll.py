@@ -14,7 +14,7 @@ class Poll:
     def __init__(self, poll_message, current_user):
         self.message = poll_message
         self.current_user = current_user
-        #self._creator = None
+        # self._creator = None
 
     # async def ensure_current_user_is_member(self):
     #     self.current_user = await self.client.user_to_member(self.current_user, self.message.guild)
@@ -61,7 +61,6 @@ class Poll:
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
         if not self.current_user:
             return
-
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
@@ -129,7 +128,12 @@ class Poll:
         await interaction.response.send_message(embed=embed)
 
     @classmethod
-    async def get_most_recent(cls, client: discord.Client, channel: discord.abc.GuildChannel | discord.PartialMessageable | discord.Thread | None, current_user):
+    async def get_most_recent(
+        cls,
+        client: discord.Client,
+        channel: discord.abc.GuildChannel | discord.PartialMessageable | discord.Thread | None,
+        current_user,
+    ):
         async for message in channel.history():
             if message.author == client.user and len(message.embeds) > 0:
                 return cls(message, current_user)

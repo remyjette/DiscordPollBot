@@ -1,34 +1,6 @@
 import discord
 import re
 
-#class DiscordPollBotClient(discord.Client):
-    # async def get_or_fetch_user(self, id):
-    #     try:
-    #         return self.get_user(id) or await self.fetch_user(id)
-    #     except discord.NotFound:
-    #         return None
-
-
-    # async def get_or_fetch_member(self, id, guild):
-    #     try:
-    #         return guild.get_member(id) or await guild.fetch_member(id)
-    #     except discord.NotFound:
-    #         return None
-
-
-    # async def get_or_fetch_channel(self, id):
-    #     try:
-    #         return self.get_channel(id) or await self.fetch_channel(id)
-    #     except discord.NotFound:
-    #         return None
-
-
-    # async def user_to_member(self, user, guild):
-    #     if isinstance(user, discord.Member):
-    #         return user
-    #     return await self.get_or_fetch_member(user.id)
-
-
 def remove_mentions(str, *, client: discord.Client, guild=None):
     # NOTE: The 'members' intent is currently required for this function to work.
     # TODO: If we don't have Intent.members, we should call fetch_user for each user mentioned and populate a dict in
