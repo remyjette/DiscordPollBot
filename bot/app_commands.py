@@ -105,6 +105,17 @@ def setup_app_commands(client: discord.Client):
 
     @tree.command(name="removeoption", description="Remove an option from latest poll")
     async def remove_option(interaction: discord.Interaction):
+        # TODO check permissions
+        # if not (
+        #     self.current_user == await self.get_creator()
+        #     or self.current_user.permissions_in(self.message.channel).manage_messages
+        #     or self.current_user == (await self.client.application_info()).owner
+        # ):
+        #     # TODO move this to app_commands.py
+        #     raise PollException(
+        #         "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
+        #     )
+
         options = (
             await Poll.get_most_recent(interaction.client, interaction.channel, interaction.user)
         ).get_poll_options()

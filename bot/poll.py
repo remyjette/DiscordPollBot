@@ -19,9 +19,8 @@ class PollOption:
 
 
 class Poll:
-    def __init__(self, poll_message, current_user):
+    def __init__(self, poll_message: discord.Message):
         self.message = poll_message
-        self.current_user = current_user
 
     @property
     def creator(self):
@@ -32,23 +31,9 @@ class Poll:
         embed = self.message.embeds[0]
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
-        if not self.current_user:
-            return
 
     async def remove_option(self, option=None, emoji=None):
         assert bool(option) ^ bool(emoji)
-
-        await self.ensure_current_user_is_member()
-
-        if not (
-            self.current_user == await self.get_creator()
-            or self.current_user.permissions_in(self.message.channel).manage_messages
-            or self.current_user == (await self.client.application_info()).owner
-        ):
-            # TODO move this to app_commands.py
-            raise PollException(
-                "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
-            )
 
         if not emoji and len(option) == 1:
             if option in allowed_emoji:
