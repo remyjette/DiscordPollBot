@@ -1,6 +1,7 @@
 import asyncio
 import discord
 import re
+from dataclasses import dataclass
 
 from .utils import remove_mentions
 from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
@@ -8,6 +9,12 @@ from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
 
 class PollException(discord.app_commands.AppCommandError):
     pass
+
+
+@dataclass(frozen=True)
+class PollOption:
+    emoji: str
+    label: str
 
 
 class Poll:
@@ -137,6 +144,10 @@ class Poll:
             if message.author == client.user and len(message.embeds) > 0:
                 return cls(message, current_user)
         raise PollException(f"No poll was found in the channel #{channel.name}.")
+
+    def get_poll_options(self):
+        embed = self.message.embeds[0]
+        return [PollOption(*line.split(" ", maxsplit=1)) for line in embed.description.split("\n")]
 
     # @classmethod
     # async def get_from_reply(cls, client: discord.Client, message, current_user, response_on_fail=None):
