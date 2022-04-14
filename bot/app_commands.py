@@ -94,9 +94,8 @@ def setup_app_commands(client: discord.Client):
     @app_commands.describe(option_name="The new option")
     async def add_option(interaction: discord.Interaction, option_name: str):
         poll = await Poll.get_most_recent(
-            interaction.client,
+            interaction.client.user,
             interaction.channel,
-            interaction.user,
         )
         await poll.add_option(option_name)
         await interaction.response.send_message(
@@ -111,14 +110,11 @@ def setup_app_commands(client: discord.Client):
         #     or self.current_user.permissions_in(self.message.channel).manage_messages
         #     or self.current_user == (await self.client.application_info()).owner
         # ):
-        #     # TODO move this to app_commands.py
         #     raise PollException(
         #         "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
         #     )
 
-        options = (
-            await Poll.get_most_recent(interaction.client, interaction.channel, interaction.user)
-        ).get_poll_options()
+        options = (await Poll.get_most_recent(interaction.client.user, interaction.channel)).get_poll_options()
         if not options:
             await interaction.response.send_message(
                 content="**Error** That poll doesn't have any options to remove", ephemeral=True

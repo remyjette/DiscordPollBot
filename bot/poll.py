@@ -27,7 +27,6 @@ class Poll:
         return self.message.interaction.user
 
     async def add_option(self, option):
-        print(self.creator)
         embed = self.message.embeds[0]
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
@@ -87,30 +86,17 @@ class Poll:
     @classmethod
     async def get_most_recent(
         cls,
-        client: discord.Client,
+        client_user: discord.ClientUser,
         channel: discord.abc.GuildChannel | discord.PartialMessageable | discord.Thread | None,
-        current_user,
     ):
         async for message in channel.history():
-            if message.author == client.user and len(message.embeds) > 0:
-                return cls(message, current_user)
+            if message.author == client_user and len(message.embeds) > 0:
+                return cls(message)
         raise PollException(f"No poll was found in the channel #{channel.name}.")
 
     def get_poll_options(self):
         embed = self.message.embeds[0]
         return [PollOption(*line.split(" ", maxsplit=1)) for line in embed.description.split("\n")]
-
-    # @classmethod
-    # async def get_from_reply(cls, client: discord.Client, message, current_user, response_on_fail=None):
-    #     if message.reference is None:
-    #         raise RuntimeError("get_from_reply() was called on a message that didn't have a reply")
-    #     # Should also check if the message type is reply. https://github.com/Rapptz/discord.py/issues/6054
-    #     replied_to_message = await message.channel.fetch_message(message.reference.message_id)
-    #     if replied_to_message.author != client.user or not replied_to_message.embeds:
-    #         if response_on_fail:
-    #             await message.channel.send(response_on_fail, delete_after=10)
-    #         return None
-    #     return cls(replied_to_message, current_user)
 
 
 def _add_option_to_embed(embed, option):
