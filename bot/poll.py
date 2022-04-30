@@ -61,10 +61,13 @@ class Poll:
         await asyncio.gather(*tasks)
 
     @classmethod
-    def create_poll_embed(cls, title: str):
+    def create_poll_embed(cls, title: str, options: List[str] | None = None):
         embed = discord.Embed()
         embed.title = title
         embed.set_footer(text="Add new options to this poll with /addoption")
+        if options:
+            for option in options:
+                _add_option_to_embed(embed, option)
         return embed
 
     @classmethod
@@ -87,7 +90,7 @@ class Poll:
         return [PollOption(*line.split(" ", maxsplit=1)) for line in embed.description.split("\n")]
 
 
-def _add_option_to_embed(embed, option):
+def _add_option_to_embed(embed: discord.Embed, option: str):
     if re.search("\((?:added|edited)[^()]*\)$", option):
         raise PollException(
             "Poll options should not contain added/edited information metadata as it will be added by the bot."

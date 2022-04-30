@@ -1,5 +1,4 @@
-from code import interact
-from typing import List
+import asyncio
 import discord
 import traceback
 from discord import app_commands
@@ -20,11 +19,14 @@ class PollSettingsModal(discord.ui.Modal, title="Create a poll"):
 
     async def on_submit(self, interaction: discord.Interaction):
         await interaction.response.defer()
-        await self.original_interaction.followup.send(embed=Poll.create_poll_embed(self.title))
         initial_poll_options = [
             stripped_value for item in self.children if (stripped_value := item.value.strip()) != ""
         ]
-        print(initial_poll_options)  # TODO Add these to the poll
+        message = await self.original_interaction.followup.send(
+            embed=Poll.create_poll_embed(self.title, initial_poll_options)
+        )
+        emojis = [option.emoji for option in Poll(message).get_poll_options()]
+        await asyncio.gather(*[message.add_reaction(emoji) for emoji in emojis])
 
 
 class RemovePollOptionDropdownView(discord.ui.View):
