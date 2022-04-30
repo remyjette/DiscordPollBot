@@ -5,7 +5,7 @@ from discord import app_commands
 
 import bot
 from .utils import remove_mentions
-from .poll import Poll, PollException, PollOption
+from .poll import Poll, PollException
 
 
 class PollSettingsModal(discord.ui.Modal, title="Create a poll"):

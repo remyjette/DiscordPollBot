@@ -2,11 +2,9 @@ import asyncio
 from typing import List
 import discord
 import re
-import functools
 from dataclasses import dataclass
 
-from .utils import remove_mentions
-from .emoji import allowed_emoji, EMOJI_A, EMOJI_Z
+from .emoji import EMOJI_A, EMOJI_Z
 
 
 class PollException(discord.app_commands.AppCommandError):
