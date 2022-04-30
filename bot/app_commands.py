@@ -130,7 +130,6 @@ def setup_app_commands(client: discord.Client):
     @tree.error
     async def on_error(
         interaction: discord.Interaction,
-        command: app_commands.Command | app_commands.ContextMenu | None,
         error: app_commands.AppCommandError,
     ):
         if isinstance(error, app_commands.CheckFailure):
