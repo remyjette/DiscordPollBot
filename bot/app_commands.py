@@ -1,7 +1,7 @@
 import asyncio
 import discord
 import traceback
-from discord import app_commands
+from discord import Permissions, app_commands
 
 import bot
 from .utils import remove_mentions
@@ -80,8 +80,25 @@ class RemovePollOptionConfirmView(discord.ui.View):
         self.stop()
 
 
+class CommandTree(app_commands.CommandTree):
+    async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
+        missing_permissions = Permissions(
+            ~interaction.channel.permissions_for(interaction.guild.me).value & bot.required_permissions.value
+        )
+        if missing_permissions != Permissions.none():
+            await interaction.response.send_message(
+                f"**Error:**. This bot cannot be used in `#{interaction.channel.name}` because it is missing the following required permissions: "
+                + ", ".join(f"`{permission}`" for (permission, value) in missing_permissions if value)
+                + ". Please let a server administrator know!",
+                ephemeral=True,
+            )
+            return False
+        else:
+            return True
+
+
 def setup_app_commands(client: discord.Client):
-    tree = app_commands.CommandTree(client)
+    tree = CommandTree(client)
 
     @client.event
     async def on_ready():

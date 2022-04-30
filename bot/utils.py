@@ -1,10 +1,11 @@
 import discord
 import re
 
+
 def remove_mentions(str, *, client: discord.Client, guild=None):
     # NOTE: The 'members' intent is currently required for this function to work.
     # TODO: If we don't have Intent.members, we should call fetch_user for each user mentioned and populate a dict in
-    # this function for replace_id_with_username to use instead of self.get_user.
+    # this function for replace_id_with_username to use instead of client.get_user.
 
     def replace_id_with_username(id):
         user = client.get_user(id)

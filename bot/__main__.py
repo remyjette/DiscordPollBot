@@ -9,7 +9,12 @@ from .app_commands import setup_app_commands
 
 client = discord.Client(
     help_command=None,
-    intents=discord.Intents(guilds=True, guild_reactions=True, members=True, messages=True),
+    intents=discord.Intents(
+        guilds=True,  # Finding the message from raw event in reactions.py, removing channel/role mentions in utils.py
+        guild_reactions=True,  # Keeping poll reactions in a valid state in reactions.py
+        members=False,  # Removing user mentions in utils.py
+        messages=True,  # Be able to respond to DMs with our OAuth URL, be able to cache Message objects
+    ),
 )
 
 try:
