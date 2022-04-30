@@ -3,6 +3,7 @@
 import discord
 import os
 
+import bot
 from .reactions import setup_reaction_listeners
 from .app_commands import setup_app_commands
 
@@ -18,5 +19,18 @@ except KeyError:
 
 setup_app_commands(client)
 setup_reaction_listeners(client)
+
+
+@client.event
+async def on_message(message: discord.Message):
+    if message.channel.type == discord.ChannelType.private and message.author != client.user:
+        await message.reply(
+            "Polls in direct messges aren't supported, but you can add me to your server at "
+            + discord.utils.oauth_url(
+                client_id=client.user.id,
+                permissions=bot.required_permissions,
+            )
+        )
+
 
 client.run(token)
