@@ -12,7 +12,9 @@ class PollSettingsModal(discord.ui.Modal, title="Create a poll"):
     def __init__(self, title: str, original_interaction: discord.Interaction):
         super().__init__()
         self.original_interaction = original_interaction
-        self.title = title
+        self.title = f'Creating Poll: "{title}"'
+        self.title = self.title[:42] + "..." if len(self.title) > 45 else self.title
+        self.poll_title = title
         for i in range(0, 5):
             item = discord.ui.TextInput(label=f"Option {i + 1}", required=False)
             self.add_item(item)
@@ -23,7 +25,7 @@ class PollSettingsModal(discord.ui.Modal, title="Create a poll"):
             stripped_value for item in self.children if (stripped_value := item.value.strip()) != ""
         ]
         message = await self.original_interaction.followup.send(
-            embed=Poll.create_poll_embed(self.title, initial_poll_options)
+            embed=Poll.create_poll_embed(self.poll_title, initial_poll_options)
         )
         emojis = [option.emoji for option in Poll(message).get_poll_options()]
         await asyncio.gather(*[message.add_reaction(emoji) for emoji in emojis])
@@ -87,16 +89,16 @@ def setup_app_commands(client: discord.Client):
         print("App commands synced.", flush=True)
 
     @tree.command(name="startpoll", description="Start a new poll")
-    @app_commands.describe(
-        title="The poll's title",
-        set_initial_options="Whether you would like to add initial options to the poll as it's created",
-    )
-    async def start_poll(interaction: discord.Interaction, title: str, set_initial_options: bool | None):
+    @app_commands.describe(title="The poll's title")
+    async def start_poll(interaction: discord.Interaction, title: str):
         title = remove_mentions(title, client=interaction.client, guild=interaction.guild)
-        if set_initial_options:
-            await interaction.response.send_modal(PollSettingsModal(title, interaction))
-        else:
-            await interaction.response.send_message(embed=Poll.create_poll_embed(title))
+        await interaction.response.send_message(embed=Poll.create_poll_embed(title))
+
+    @tree.command(name="startpollwithoptions", description="Start a new poll and set some initial poll options")
+    @app_commands.describe(title="The poll's title")
+    async def start_poll_with_options(interaction: discord.Interaction, title: str):
+        title = remove_mentions(title, client=interaction.client, guild=interaction.guild)
+        await interaction.response.send_modal(PollSettingsModal(title, interaction))
 
     @tree.command(name="addoption", description="Add a new option to the latest poll")
     @app_commands.describe(option_name="The new option")
