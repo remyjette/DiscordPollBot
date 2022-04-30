@@ -29,14 +29,13 @@ def setup_reaction_listeners(client: discord.Client):
         if message.author != client.user:
             return
         emoji = payload.emoji.name
-        reaction = discord.utils.find(lambda r: r.emoji == emoji, message.reactions)
 
         if not message.embeds:
             return
 
         elif payload.user_id == client.user.id:
-            # Someone with the 'Manage Messages' permissions removed our reaction. Add our reaction back, they should
-            # use /removeoption instead.
+            # Someone with the 'Manage Messages' permissions removed the bot's reaction. Add our reaction back, they
+            # should use /removeoption instead.
             await message.add_reaction(emoji)
 
     @client.event
@@ -52,6 +51,5 @@ def setup_reaction_listeners(client: discord.Client):
 
         # Someone with the 'Manage Messages' permissions used 'Remove All Reactions' on our poll. The existing votes
         # were lost, but we can at least re-populate the poll.
-
         current_emoji = [line[0] for line in message.embeds[0].description.split("\n") if line[0] in allowed_emoji]
         await asyncio.gather(*[message.add_reaction(emoji) for emoji in current_emoji])
