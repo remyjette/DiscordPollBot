@@ -29,9 +29,14 @@ class PollSettingsModal(discord.ui.Modal, title="Create a poll"):
 
 class RemovePollOptionDropdownView(discord.ui.View):
     class RemovePollOptionDropdown(discord.ui.Select):
-        def __init__(self, original_interaction: discord.Interaction, poll_options: List[PollOption]):
+        def __init__(self, original_interaction: discord.Interaction, poll: Poll):
             self.original_interaction = original_interaction
-            select_options = [discord.SelectOption(label=option.label, emoji=option.emoji) for option in poll_options]
+            self.poll = poll
+            select_options = [
+                discord.SelectOption(label=option.label, emoji=option.emoji) for option in poll.get_poll_options()
+            ]
+            if not select_options:
+                raise PollException("This poll does not have any options to remove.")
             super().__init__(
                 placeholder="Chose an option to remove...", min_values=1, max_values=1, options=select_options
             )
@@ -39,20 +44,21 @@ class RemovePollOptionDropdownView(discord.ui.View):
         async def callback(self, interaction: discord.Interaction):
             await interaction.response.defer()
             await self.original_interaction.edit_original_message(
-                content=f"Are you sure you want to remove {self.values[0]}?",
-                view=RemovePollOptionConfirmView(self.original_interaction, self.values[0]),
+                content=f"Are you sure you want to remove '{self.values[0]}'?",
+                view=RemovePollOptionConfirmView(self.original_interaction, self.poll, self.values[0]),
             )
 
-    def __init__(self, original_interaction: discord.Interaction, poll_options: List[PollOption]):
+    def __init__(self, original_interaction: discord.Interaction, poll: Poll):
         super().__init__()
-        self.add_item(self.RemovePollOptionDropdown(original_interaction, poll_options))
+        self.add_item(self.RemovePollOptionDropdown(original_interaction, poll))
 
 
 class RemovePollOptionConfirmView(discord.ui.View):
-    def __init__(self, original_interaction: discord.Interaction, chosen_option):
+    def __init__(self, original_interaction: discord.Interaction, poll: Poll, chosen_option: str):
         super().__init__()
         self.original_interaction = original_interaction
         self.chosen_option = chosen_option
+        self.poll = poll
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.gray)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -63,10 +69,10 @@ class RemovePollOptionConfirmView(discord.ui.View):
     @discord.ui.button(label="Remove", style=discord.ButtonStyle.danger)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
+        await self.poll.remove_option(self.chosen_option)
         await self.original_interaction.edit_original_message(
             content=f"Option '{self.chosen_option}' has been removed.", view=None
         )
-        # TODO actually delete it here
         self.stop()
 
 
@@ -114,13 +120,8 @@ def setup_app_commands(client: discord.Client):
         #         "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
         #     )
 
-        options = (await Poll.get_most_recent(interaction.client.user, interaction.channel)).get_poll_options()
-        if not options:
-            await interaction.response.send_message(
-                content="**Error** That poll doesn't have any options to remove", ephemeral=True
-            )
-            return
-        await interaction.response.send_message(view=RemovePollOptionDropdownView(interaction, options), ephemeral=True)
+        poll = await Poll.get_most_recent(interaction.client.user, interaction.channel)
+        await interaction.response.send_message(view=RemovePollOptionDropdownView(interaction, poll), ephemeral=True)
 
     @tree.error
     async def on_error(

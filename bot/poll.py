@@ -1,4 +1,5 @@
 import asyncio
+from typing import List
 import discord
 import re
 import functools
@@ -31,45 +32,28 @@ class Poll:
         emoji = _add_option_to_embed(embed, option)
         await asyncio.gather(self.message.edit(embed=embed), self.message.add_reaction(emoji))
 
-    async def remove_option(self, option=None, emoji=None):
-        assert bool(option) ^ bool(emoji)
-
-        if not emoji and len(option) == 1:
-            if option in allowed_emoji:
-                emoji = option
-                option = None
-            elif ord("A") <= (option_ord := ord(option.upper())) <= ord("Z"):
-                emoji = chr(ord(EMOJI_A) + option_ord - ord("A"))
-                option = None
+    async def remove_option(self, option: str):
+        emoji = None
 
         def filtered_lines(lines):
             nonlocal emoji
             iterator = iter(lines)
             for line in iterator:
-                if emoji and line.startswith(emoji):
+                line_emoji, line_option = line.split(" ", maxsplit=1)
+                if line_option == option:
+                    emoji = line_emoji
                     break
-                if option is not None:
-                    line_emoji, line_option = line.split(" ", maxsplit=1)
-                    if line_option == option:
-                        emoji = line_emoji
-                        break
                 yield line
+            else:
+                raise PollException(f"This poll no longer has an option '{option}' to remove.")
             yield from iterator
 
         embed = self.message.embeds[0]
 
-        # Copy the string before we start changing it, so we can return an error if we did nothing
-        if embed.description:
-            before = embed.description
-            new_description = "\n".join(filtered_lines(embed.description.split("\n")))
+        if not embed.description:
+            raise PollException("This poll doesn't have any options to remove.")
 
-        if not embed.description or new_description == before:
-            message = f"This poll doesn't have an option '{option or emoji}' to remove."
-            if option:
-                message += " You could also try specifying option's letter instead (`!removeoption A`)"
-            raise PollException(message)
-
-        embed.description = new_description
+        embed.description = "\n".join(filtered_lines(embed.description.split("\n")))
 
         tasks = [self.message.edit(embed=embed)]
         if discord.utils.get(self.message.reactions, emoji=emoji):
@@ -94,8 +78,12 @@ class Poll:
                 return cls(message)
         raise PollException(f"No poll was found in the channel #{channel.name}.")
 
-    def get_poll_options(self):
+    def get_poll_options(self) -> List[PollOption]:
+        if len(self.message.embeds) == 0:
+            raise RuntimeError("This poll doesn't have any embeds!")
         embed = self.message.embeds[0]
+        if not embed.description:
+            return list()
         return [PollOption(*line.split(" ", maxsplit=1)) for line in embed.description.split("\n")]
 
 
