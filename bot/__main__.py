@@ -7,7 +7,6 @@ from .reactions import setup_reaction_listeners
 from .app_commands import setup_app_commands
 
 client = discord.Client(
-    command_prefix="!",
     help_command=None,
     intents=discord.Intents(guilds=True, guild_reactions=True, members=True, messages=True),
 )
