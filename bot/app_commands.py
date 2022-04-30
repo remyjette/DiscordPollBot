@@ -100,6 +100,20 @@ class CommandTree(app_commands.CommandTree):
 def setup_app_commands(client: discord.Client):
     tree = CommandTree(client)
 
+    async def can_edit_poll(interaction: discord.Interaction) -> bool:
+        poll = await Poll.get_most_recent(client.user, interaction.channel)
+        if (
+            interaction.user in [poll.creator, (await client.application_info()).owner]
+            or interaction.permissions.manage_messages
+        ):
+            return True
+        else:
+            await interaction.response.send_message(
+                "**Error**: Only the poll creator or someone with the 'Manage Messages' permissions can remove a poll option.",
+                ephemeral=True,
+            )
+            return False
+
     @client.event
     async def on_ready():
         await tree.sync(guild=bot.TEST_GUILD if client.user.id == bot.TEST_USER.id else None)
@@ -130,17 +144,8 @@ def setup_app_commands(client: discord.Client):
         )
 
     @tree.command(name="removeoption", description="Remove an option from latest poll")
+    @app_commands.check(can_edit_poll)
     async def remove_option(interaction: discord.Interaction):
-        # TODO check permissions
-        # if not (
-        #     self.current_user == await self.get_creator()
-        #     or self.current_user.permissions_in(self.message.channel).manage_messages
-        #     or self.current_user == (await self.client.application_info()).owner
-        # ):
-        #     raise PollException(
-        #         "Only the poll creator or someone with 'Manage Messages' permissions can remove a poll option."
-        #     )
-
         poll = await Poll.get_most_recent(interaction.client.user, interaction.channel)
         await interaction.response.send_message(view=RemovePollOptionDropdownView(interaction, poll), ephemeral=True)
 
@@ -156,6 +161,7 @@ def setup_app_commands(client: discord.Client):
         else:
             traceback.print_exception(error)
             return
-        await interaction.response.send_message("**Error**: " + message, ephemeral=True)
+        if not interaction.response.is_done():
+            await interaction.response.send_message("**Error**: " + message, ephemeral=True)
 
     tree.copy_global_to(guild=bot.TEST_GUILD)
