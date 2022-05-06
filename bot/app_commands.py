@@ -1,11 +1,12 @@
 import asyncio
-import discord
 import traceback
+
+import discord
 from discord import Permissions, app_commands
 
 import bot
-from .utils import remove_mentions
 from .poll import Poll, PollException
+from .utils import remove_mentions
 
 
 class PollSettingsModal(discord.ui.Modal, title="Create a poll"):

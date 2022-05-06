@@ -1,8 +1,9 @@
 import asyncio
-from typing import List
-import discord
 import re
 from dataclasses import dataclass
+from typing import List
+
+import discord
 
 from .emoji import EMOJI_A, EMOJI_Z
 

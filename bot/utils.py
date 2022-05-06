@@ -1,5 +1,6 @@
-import discord
 import re
+
+import discord
 
 
 def remove_mentions(str, *, client: discord.Client, guild=None):

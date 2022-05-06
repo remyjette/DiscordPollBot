@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-import discord
 import os
 
+import discord
+
 import bot
-from .reactions import setup_reaction_listeners
 from .app_commands import setup_app_commands
+from .reactions import setup_reaction_listeners
 
 client = discord.Client(
     help_command=None,
