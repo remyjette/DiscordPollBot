@@ -116,7 +116,8 @@ def setup_app_commands(client: discord.Client):
             return False
 
     @client.event
-    async def on_ready():
+    async def setup_hook():
+        tree.copy_global_to(guild=bot.TEST_GUILD)
         await tree.sync(guild=bot.TEST_GUILD if client.user.id == bot.TEST_USER.id else None)
         print("App commands synced.", flush=True)
 
@@ -164,5 +165,3 @@ def setup_app_commands(client: discord.Client):
             return
         if not interaction.response.is_done():
             await interaction.response.send_message("**Error**: " + message, ephemeral=True)
-
-    tree.copy_global_to(guild=bot.TEST_GUILD)
