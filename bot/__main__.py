@@ -1,31 +1,42 @@
 #!/usr/bin/env python3
 
-import bot
-import discord
 import os
-from discord.ext import commands
 
-from .commands import Commands, DiscordBotHelpCommand
-from .reactions import Reactions
-from .slash_commands import SlashCommands
+import discord
 
-bot.instance = commands.Bot(
-    command_prefix="!",
-    help_command=DiscordBotHelpCommand(),
-    intents=discord.Intents(guilds=True, guild_reactions=True, members=True, messages=True),
+import bot
+from .app_commands import setup_app_commands
+from .reactions import setup_reaction_listeners
+
+client = discord.Client(
+    help_command=None,
+    intents=discord.Intents(
+        guilds=True,  # Finding the message from raw event in reactions.py, removing channel/role mentions in utils.py
+        guild_reactions=True,  # Keeping poll reactions in a valid state in reactions.py
+        members=False,  # Removing user mentions in utils.py
+        messages=True,  # Be able to respond to DMs with our OAuth URL, be able to cache Message objects
+    ),
 )
-
-
-@bot.instance.event
-async def on_ready():
-    print("Ready")
-
 
 try:
     token = os.environ["DISCORD_TOKEN"]
 except KeyError:
     raise SystemExit("You need to specify the environment variable DISCORD_TOKEN before running the bot!")
-bot.instance.add_cog(Commands())
-bot.instance.add_cog(Reactions())
-bot.instance.add_cog(SlashCommands())
-bot.instance.run(token)
+
+setup_app_commands(client)
+setup_reaction_listeners(client)
+
+
+@client.event
+async def on_message(message: discord.Message):
+    if message.channel.type == discord.ChannelType.private and message.author != client.user:
+        await message.reply(
+            "Polls in direct messges aren't supported, but you can add me to your server at "
+            + discord.utils.oauth_url(
+                client_id=client.user.id,
+                permissions=bot.required_permissions,
+            )
+        )
+
+
+client.run(token)
