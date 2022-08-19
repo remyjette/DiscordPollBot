@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import traceback
 
 import discord
@@ -7,6 +8,8 @@ from discord import Permissions, app_commands
 import bot
 from .poll import Poll, PollException
 from .utils import remove_mentions
+
+_log = logging.getLogger(__name__)
 
 
 class PollSettingsModal(discord.ui.Modal, title="Create a poll"):
@@ -122,7 +125,7 @@ def setup_app_commands(client: discord.Client):
     async def setup_hook():
         tree.copy_global_to(guild=bot.TEST_GUILD)
         await tree.sync(guild=bot.TEST_GUILD if client.user.id == bot.TEST_USER.id else None)
-        print("App commands synced.", flush=True)
+        _log.info("App commands synced.")
 
     @tree.command(name="startpoll", description="Start a new poll")
     @app_commands.describe(title="The poll's title")

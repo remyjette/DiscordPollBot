@@ -39,4 +39,4 @@ async def on_message(message: discord.Message):
         )
 
 
-client.run(token)
+client.run(token, root_logger=True)
