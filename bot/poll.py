@@ -61,8 +61,7 @@ class Poll:
 
     @classmethod
     def create_poll_embed(cls, title: str, options: List[str] | None = None):
-        embed = discord.Embed()
-        embed.title = title
+        embed = discord.Embed(title=title)
         embed.set_footer(text="Add new options to this poll with /addoption")
         if options:
             for option in options:

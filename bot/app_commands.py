@@ -48,7 +48,7 @@ class RemovePollOptionDropdownView(discord.ui.View):
 
         async def callback(self, interaction: discord.Interaction):
             await interaction.response.defer()
-            await self.original_interaction.edit_original_message(
+            await self.original_interaction.edit_original_response(
                 content=f"Are you sure you want to remove '{self.values[0]}'?",
                 view=RemovePollOptionConfirmView(self.original_interaction, self.poll, self.values[0]),
             )
@@ -68,14 +68,14 @@ class RemovePollOptionConfirmView(discord.ui.View):
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.gray)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        await self.original_interaction.edit_original_message(content=f"Remove poll option cancelled.", view=None)
+        await self.original_interaction.edit_original_response(content=f"Remove poll option cancelled.", view=None)
         self.stop()
 
     @discord.ui.button(label="Remove", style=discord.ButtonStyle.danger)
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         await self.poll.remove_option(self.chosen_option)
-        await self.original_interaction.edit_original_message(
+        await self.original_interaction.edit_original_response(
             content=f"Option '{self.chosen_option}' has been removed.", view=None
         )
         self.stop()
