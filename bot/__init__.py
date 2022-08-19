@@ -9,4 +9,5 @@ required_permissions = discord.Permissions(
     embed_links=True,  # Creating a poll doesn't need this, but *editing* the embed for /addoption & /removeoption does
     read_message_history=True,  # To find the most recent poll when a user does /addoption or /removeoption
     add_reactions=True,  # To add the initial reactions for users to be able to click on to vote
+    # connect=True,  # read_messages but for Voice Chat channels. Not requiring for now, will check on command instead.
 )

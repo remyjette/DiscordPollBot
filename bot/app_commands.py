@@ -83,8 +83,11 @@ class RemovePollOptionConfirmView(discord.ui.View):
 
 class CommandTree(app_commands.CommandTree):
     async def interaction_check(self, interaction: discord.Interaction, /) -> bool:
+        required_permissions = bot.required_permissions
+        if interaction.channel.type == discord.ChannelType.voice:
+            required_permissions.connect = True
         missing_permissions = Permissions(
-            ~interaction.channel.permissions_for(interaction.guild.me).value & bot.required_permissions.value
+            ~interaction.channel.permissions_for(interaction.guild.me).value & required_permissions.value
         )
         if missing_permissions != Permissions.none():
             await interaction.response.send_message(
