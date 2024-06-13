@@ -89,7 +89,7 @@ class Poll:
 
 
 def _add_option_to_embed(embed: discord.Embed, option: str):
-    if re.search("\((?:added|edited)[^()]*\)$", option):
+    if re.search(r"\((?:added|edited)[^()]*\)$", option):
         raise PollException(
             "Poll options should not contain added/edited information metadata as it will be added by the bot."
         )
