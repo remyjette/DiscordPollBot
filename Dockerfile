@@ -1,11 +1,11 @@
-FROM python:3.10
+FROM python:3.12
 
 WORKDIR /bot
 
 ENV PIP_DISABLE_PIP_VERSION_CHECK=1
 ENV PIP_NO_CACHE_DIR=1
 
-RUN pip install discord.py==2.0.0
+RUN pip install discord.py==2.3.2
 
 COPY . .
 
